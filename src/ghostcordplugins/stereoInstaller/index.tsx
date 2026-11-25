@@ -125,6 +125,7 @@ export default definePlugin({
     description: "Patches Discord's voice module for true stereo audio, with automatic backup and restore.",
     authors: [{ name: "offxy", id: 1402331570525835275n }],
     dependencies: ["Settings"],
+    required: true,
     enabledByDefault: true,
     startAt: StartAt.WebpackReady,
     settings,
