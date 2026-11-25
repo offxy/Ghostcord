@@ -8,12 +8,12 @@ import { GHOSTCORD_LOGO } from "@shared/ghostcordLogo";
 import { NoticeColors, showNotice } from "@api/Notices";
 import { hasAnyVisibleSettings, isPluginEnabled, pluginRequiresRestart, startDependenciesRecursive, startPlugin, stopPlugin } from "@api/PluginManager";
 import { Settings } from "@api/Settings";
-import { CogWheel, InfoIcon } from "@components/Icons";
+import { CogWheel, InfoIcon, StarFilled, StarOutlined } from "@components/Icons";
 import { AddonCard } from "@components/settings/AddonCard";
 import { classNameFactory } from "@utils/css";
 import { Logger } from "@utils/Logger";
 import { Plugin } from "@utils/types";
-import { React, showToast } from "@webpack/common";
+import { React, showToast, Tooltip } from "@webpack/common";
 
 import { PluginMeta } from "~plugins";
 
@@ -138,6 +138,15 @@ export function PluginCard({ plugin, disabled, onRestartNeeded, onMouseEnter, on
 
     const tooltip = pluginDetails?.title || "Unknown Plugin";
 
+    const [isFavorite, setFavorite] = React.useState(!!Settings.plugins[plugin.name]?.isFavorite);
+    const toggleFavorite = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const next = !isFavorite;
+        Settings.plugins[plugin.name].isFavorite = next;
+        setFavorite(next);
+    };
+    const StarIcon = isFavorite ? StarFilled : StarOutlined;
+
     return (
         <AddonCard
             name={plugin.name}
@@ -151,6 +160,19 @@ export function PluginCard({ plugin, disabled, onRestartNeeded, onMouseEnter, on
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             infoButton={
+                <>
+                <Tooltip text={isFavorite ? "Unfavorite" : "Favorite (pins to top)"}>
+                    {props => (
+                        <button
+                            {...props}
+                            aria-label={isFavorite ? "Unfavorite plugin" : "Favorite plugin"}
+                            onClick={toggleFavorite}
+                            className={cl("info-button", "fav-button", isFavorite && "fav-button-active")}
+                        >
+                            <StarIcon className={cl("info-icon")} />
+                        </button>
+                    )}
+                </Tooltip>
                 <button
                     role="switch"
                     onClick={() => openPluginModal(plugin, onRestartNeeded)}
@@ -161,6 +183,7 @@ export function PluginCard({ plugin, disabled, onRestartNeeded, onMouseEnter, on
                         : <InfoIcon className={cl("info-icon")} />
                     }
                 </button>
+                </>
             } />
     );
 }
