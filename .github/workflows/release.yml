@@ -1,0 +1,40 @@
+name: Ghostcord Release
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+
+            - name: Build
+              run: pnpm buildStandalone
+
+            - name: Collect release files
+              run: |
+                  mkdir -p release
+                  cp dist/desktop.asar release/
+                  cp dist/desktop/patcher.js dist/desktop/preload.js dist/desktop/renderer.js dist/desktop/renderer.css release/ 2>/dev/null || true
+                  find release -size 0 -delete
+
+            - name: Publish to "latest" release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  gh release view latest >/dev/null 2>&1 || gh release create latest --title "Ghostcord" --notes "Auto-built on every push to main."
+                  gh release upload latest release/* --clobber

@@ -1,0 +1,188 @@
+
+/* ============ Logs modal ============ */
+.vc-msg-logger-enhanced-modal-root { max-height: 100%; max-width: 100%; }
+.vc-msg-logger-enhanced-modal-content-container {
+    height: 100%; width: 100%;
+    transition: opacity 100ms ease-in;
+}
+
+.vc-msg-logger-enhanced-modal {
+    display: flex; flex-direction: column; gap: 12px; width: 100%; padding-right: 20px;
+}
+
+.vc-msg-logger-enhanced-tabs { display: flex; gap: 6px; }
+.vc-msg-logger-enhanced-tab {
+    --mle-tone: var(--status-danger);
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px; border: 0; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    color: var(--text-muted); background: var(--background-modifier-hover);
+    transition: background .15s, color .15s;
+}
+.vc-msg-logger-enhanced-tab-edited { --mle-tone: var(--status-warning); }
+.vc-msg-logger-enhanced-tab-ghost { --mle-tone: var(--brand-500); }
+.vc-msg-logger-enhanced-tab:hover { color: var(--interactive-text-hover, var(--text-default)); }
+.vc-msg-logger-enhanced-tab-active {
+    color: var(--mle-tone);
+    background: color-mix(in srgb, var(--mle-tone) 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mle-tone) 40%, transparent);
+}
+.vc-msg-logger-enhanced-tab-count {
+    min-width: 18px; padding: 1px 6px; border-radius: 999px; font-size: 11px; text-align: center;
+    background: var(--background-modifier-accent); color: var(--text-default);
+}
+.vc-msg-logger-enhanced-tab-active .vc-msg-logger-enhanced-tab-count { background: var(--mle-tone); color: #fff; }
+
+.vc-msg-logger-enhanced-toolbar { display: flex; gap: 8px; align-items: center; }
+.vc-msg-logger-enhanced-search { flex: 1; }
+.vc-msg-logger-enhanced-icon-btn {
+    height: 36px; padding: 0 12px; border-radius: 8px; border: 0; cursor: pointer; white-space: nowrap;
+    font-weight: 600; font-size: 13px;
+    color: var(--text-default); background: var(--background-modifier-hover);
+}
+.vc-msg-logger-enhanced-icon-btn:hover { background: var(--background-modifier-active); }
+
+.vc-msg-logger-enhanced-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    min-height: 280px; text-align: center;
+}
+
+.vc-msg-logger-enhanced-list { display: flex; flex-direction: column; gap: 8px; padding: 12px 0 16px; }
+
+.vc-msg-logger-enhanced-day {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; gap: 8px; padding: 6px 0 2px;
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+    color: var(--text-muted);
+    background: var(--modal-background, var(--background-primary));
+}
+.vc-msg-logger-enhanced-day::after { content: ""; flex: 1; height: 1px; background: var(--background-modifier-accent); }
+
+.vc-msg-logger-enhanced-card {
+    --mle-tone: var(--status-danger);
+    border-radius: 10px; overflow: hidden;
+    background: var(--background-secondary);
+    box-shadow: inset 3px 0 0 var(--mle-tone);
+    transition: background .15s;
+}
+.vc-msg-logger-enhanced-card:hover { background: var(--background-secondary-alt, var(--background-secondary)); }
+.vc-msg-logger-enhanced-card-edited { --mle-tone: var(--status-warning); }
+.vc-msg-logger-enhanced-card-ghost { --mle-tone: var(--brand-500); }
+
+.vc-msg-logger-enhanced-card-head {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px 0 16px; font-size: 12px; min-width: 0;
+}
+.vc-msg-logger-enhanced-badge {
+    padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 11px; flex: none;
+    color: var(--mle-tone); background: color-mix(in srgb, var(--mle-tone) 16%, transparent);
+}
+.vc-msg-logger-enhanced-time { color: var(--text-muted); flex: none; }
+.vc-msg-logger-enhanced-loc {
+    display: inline-flex; align-items: center; gap: 4px; min-width: 0;
+    color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vc-msg-logger-enhanced-loc img { width: 14px; height: 14px; border-radius: 4px; }
+.vc-msg-logger-enhanced-card-actions {
+    margin-left: auto; display: flex; gap: 4px; flex: none;
+    opacity: 0; transition: opacity .15s;
+}
+.vc-msg-logger-enhanced-card:hover .vc-msg-logger-enhanced-card-actions,
+.vc-msg-logger-enhanced-card-actions:has(.vc-msg-logger-enhanced-chip-on) { opacity: 1; }
+.vc-msg-logger-enhanced-chip {
+    padding: 2px 8px; border-radius: 6px; border: 0; cursor: pointer; font-size: 12px; font-weight: 600;
+    color: var(--text-default); background: var(--background-modifier-hover);
+}
+.vc-msg-logger-enhanced-chip:hover, .vc-msg-logger-enhanced-chip-on { background: var(--background-modifier-active); }
+.vc-msg-logger-enhanced-chip-danger:hover { color: #fff; background: var(--status-danger); }
+
+.vc-msg-logger-enhanced-modal-msg-preview { padding-left: 4px; }
+
+.vc-msg-logger-enhanced-history {
+    margin: 0 12px 12px 16px; padding: 10px 12px; border-radius: 8px;
+    display: flex; flex-direction: column; gap: 6px;
+    background: var(--background-tertiary, rgba(0,0,0,.2));
+}
+.vc-msg-logger-enhanced-history-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+.vc-msg-logger-enhanced-history-row { display: flex; gap: 10px; font-size: 14px; line-height: 1.35; color: var(--text-default); }
+.vc-msg-logger-enhanced-history-label {
+    flex: none; width: 56px; font-size: 11px; font-weight: 700; padding-top: 2px; color: var(--text-muted); cursor: default;
+}
+.vc-msg-logger-enhanced-history-text, .vc-msg-logger-enhanced-diff { white-space: pre-wrap; word-break: break-word; }
+.vc-msg-logger-enhanced-diff-removed {
+    color: var(--status-danger); text-decoration: line-through;
+    background: color-mix(in srgb, var(--status-danger) 14%, transparent); border-radius: 3px;
+}
+.vc-msg-logger-enhanced-diff-added {
+    color: var(--status-positive);
+    background: color-mix(in srgb, var(--status-positive) 14%, transparent); border-radius: 3px;
+}
+
+.vc-msg-logger-enhanced-load-more { margin-top: 8px; width: 100%; }
+
+/* ============ Settings: stats ============ */
+.vc-msg-logger-enhanced-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+.vc-msg-logger-enhanced-stat {
+    flex: 1; min-width: 100px; padding: 10px 12px; border-radius: 8px; background: var(--background-secondary);
+}
+.vc-msg-logger-enhanced-stat b { display: block; font-size: 20px; color: var(--header-primary, var(--text-default)); }
+.vc-msg-logger-enhanced-stat span { font-size: 12px; color: var(--text-muted); }
+
+/* ============ In-chat deleted message styles ============ */
+body.vc-mle-style-faded .messagelogger-deleted { opacity: .45; transition: opacity .15s; }
+body.vc-mle-style-faded .messagelogger-deleted:hover { opacity: 1; }
+
+body.vc-mle-style-card .messagelogger-deleted {
+    background: color-mix(in srgb, var(--status-danger) 7%, transparent) !important;
+    box-shadow: inset 2px 0 0 var(--status-danger);
+}
+body.vc-mle-style-card .messagelogger-deleted [class*="markup"] { color: var(--text-default) !important; }
+
+body.vc-mle-style-collapsed .messagelogger-deleted {
+    max-height: 26px; overflow: hidden; opacity: .6;
+    box-shadow: inset 2px 0 0 var(--status-danger);
+    transition: max-height .2s ease, opacity .15s;
+    -webkit-mask-image: linear-gradient(#000 60%, transparent);
+}
+body.vc-mle-style-collapsed .messagelogger-deleted:hover,
+body.vc-mle-style-collapsed .messagelogger-deleted:focus-within {
+    max-height: 2000px; opacity: 1; -webkit-mask-image: none;
+}
+
+body.vc-mle-hide-deleted .messagelogger-deleted { display: none !important; }
+
+/* ============ Kept from original ============ */
+.vc-msg-logger-enhanced-toolbox-btn svg {
+    color: var(--interactive-icon-default);
+}
+
+:is(
+        .vc-msg-logger-enhanced-toolbox-btn:hover,
+        .vc-msg-logger-enhanced-toolbox-btn[class*="selected"]
+    )
+    svg {
+    color: var(--interactive-icon-active);
+}
+
+.vc-msg-logger-enhanced-folder-upload-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    background-color: var(--background-secondary-alt);
+}
+
+.vc-msg-logger-enhanced-folder-upload-input {
+    cursor: pointer;
+    padding: 10px 0 10px 10px;
+    color: var(--text-default);
+}
+
+.vc-msg-logger-enhanced-folder-upload-button {
+    margin: 6px;
+    padding: 4px 8px;
+}
+
+
+
+
+.vc-updater-modal-content { padding: 1rem 2rem; }

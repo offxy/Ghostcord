@@ -1,0 +1,28 @@
+.gc-stereo { display: flex; flex-direction: column; gap: 14px; color: var(--text-normal); max-width: 700px; }
+.gc-stereo-warning { border: 1px solid #f0b232; border-radius: 6px; padding: 12px 14px; background: color-mix(in srgb, #f0b232 6%, transparent); }
+.gc-stereo-warning h3 { font-weight: 600; margin-bottom: 8px; color: var(--header-primary); }
+.gc-stereo-warning p { font-size: 14px; color: var(--text-muted); margin: 0 0 6px; line-height: 1.35; }
+.gc-stereo-row { display: flex; align-items: center; gap: 16px; }
+.gc-stereo-label { width: 200px; display: flex; flex-direction: column; }
+.gc-stereo-label b { color: var(--header-primary); font-size: 15px; }
+.gc-stereo-label span { font-size: 12px; color: var(--text-muted); }
+.gc-stereo-select, .gc-stereo-input { flex: 1; background: var(--input-background, var(--background-secondary)); color: var(--text-normal); border: 1px solid var(--border-subtle, #3f4147); border-radius: 6px; padding: 10px 12px; font-size: 14px; }
+.gc-stereo-input { width: 100%; box-sizing: border-box; font-family: var(--font-code); }
+.gc-stereo-chips { display: flex; gap: 8px; }
+.gc-stereo-chip { background: var(--background-modifier-accent, #3f4147); color: var(--text-normal) !important; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none !important; }
+.gc-stereo-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.gc-btn { background: var(--background-modifier-accent, #4e5058); color: #fff; border: 0; border-radius: 4px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.gc-btn:disabled { opacity: .5; cursor: not-allowed; }
+.gc-green { background: #248046; } .gc-red { background: #da373c; } .gc-small { padding: 5px 10px; }
+.gc-stereo-status { display: flex; gap: 14px; align-items: center; border: 1px solid var(--border-subtle, #3f4147); border-radius: 6px; padding: 14px; }
+.gc-stereo-status div { display: flex; flex-direction: column; gap: 2px; }
+.gc-stereo-status b { color: var(--header-primary); } .gc-stereo-status span { font-size: 13px; color: var(--text-muted); }
+.gc-stereo-dot { font-size: 22px; color: var(--text-muted); } .gc-stereo-dot.on { color: #23a55a; }
+.gc-stereo-table { background: var(--background-secondary-alt, #232428); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.gc-stereo-table div { display: flex; gap: 16px; background: var(--background-tertiary, #1e1f22); padding: 10px 14px; border-radius: 4px; align-items: center; }
+.gc-stereo-table span { width: 150px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.gc-stereo-table code { font-family: var(--font-code); font-size: 13px; color: var(--text-normal); word-break: break-all; }
+.gc-stereo-detected { font-size: 13px; color: var(--text-muted); margin: 0; }
+.gc-stereo-logs { background: var(--background-secondary-alt, #232428); border-radius: 8px; padding: 12px; }
+.gc-stereo-logs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--header-primary); }
+.gc-stereo-logs pre { font-family: var(--font-code); font-size: 12px; color: var(--text-muted); white-space: pre-wrap; max-height: 220px; overflow: auto; margin: 0; }
