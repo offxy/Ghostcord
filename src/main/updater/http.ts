@@ -40,8 +40,20 @@ async function githubGet<T = any>(endpoint: string) {
     });
 }
 
+// The "latest" release is titled "Ghostcord <full sha>" by the release workflow.
+// Compare against that, not HEAD, so a push that is still building doesn't cause an update loop.
+async function getLatestRelease() {
+    const data = await githubGet("/releases/latest");
+    const sha = String(data.name ?? "").split(" ").pop() ?? "";
+    return { data, sha: /^[0-9a-f]{7,40}$/i.test(sha) ? sha : null };
+}
+
+const sameCommit = (a: string, b: string) => a.startsWith(b) || b.startsWith(a);
+
 async function listUpdates() {
-    const data = await githubGet(`/compare/${gitHash}...HEAD`);
+    const { sha } = await getLatestRelease();
+    if (!sha || sameCommit(sha, gitHash)) return [];
+    const data = await githubGet(`/compare/${gitHash}...${sha}`);
 
     return data.commits.map((c: any) => ({
         hash: c.sha,
@@ -51,12 +63,12 @@ async function listUpdates() {
 }
 
 async function fetchUpdate() {
-    const { ahead_by } = await githubGet(`/compare/${gitHash}...HEAD`);
-    if (!ahead_by)
+    const { data, sha } = await getLatestRelease();
+    if (!sha || sameCommit(sha, gitHash))
         return false;
 
-    const data = await githubGet("/releases/latest");
     const asset = data.assets.find(a => a.name === ASAR_FILE);
+    if (!asset) return false;
     PendingUpdate = asset.browser_download_url;
 
     return true;
