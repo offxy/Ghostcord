@@ -2,7 +2,7 @@
  * Ghostcord — live ghost badge on people who are on Ghostcord right now.
  */
 
-import { addProfileBadge, BadgePosition, ProfileBadge, removeProfileBadge } from "@api/Badges";
+import { addProfileBadge, BadgePosition, BadgeRarity, ProfileBadge, removeProfileBadge } from "@api/Badges";
 import { GHOSTCORD_LOGO } from "@shared/ghostcordLogo";
 import definePlugin from "@utils/types";
 import { UserStore } from "@webpack/common";
@@ -31,11 +31,17 @@ async function loadUsers() {
 }
 
 const badge: ProfileBadge = {
+    id: "ghostcord_user",
+    key: "ghostcord_user",
+    name: "Ghostcord",
     description: "On Ghostcord",
+    infoLabel: "Ghostcord",
+    detail: "This user is using Ghostcord right now.",
+    rarity: BadgeRarity.COMMON,
     iconSrc: GHOSTCORD_LOGO,
+    largeIconSrc: GHOSTCORD_LOGO,
     position: BadgePosition.START,
-    props: { style: { imageRendering: "pixelated", borderRadius: 4 } },
-    shouldShow: ({ userId }) => users.has(userId),
+    shouldShow: ({ userId }) => !!userId && users.has(userId),
 };
 
 export default definePlugin({
