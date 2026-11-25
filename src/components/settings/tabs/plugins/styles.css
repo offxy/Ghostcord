@@ -276,3 +276,16 @@
 .vc-plugins-ui-elements {
     margin-top: 16px;
 }
+
+/* Ghostcord stat cards */
+.gc-plugin-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+.gc-plugin-stat {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px;
+    background: var(--background-secondary, #2b2d31); border: 1px solid var(--border-subtle, #3f4147); border-radius: 8px;
+}
+.gc-plugin-stat-label { font-size: 11px; font-weight: 700; letter-spacing: .02em; color: var(--text-muted); }
+.gc-plugin-stat-value { display: flex; align-items: center; gap: 6px; font-size: 22px; font-weight: 700; color: var(--header-primary); }
+.gc-plugin-stat-value small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.gc-plugin-ring { width: 18px; height: 18px; transform: rotate(-90deg); }
+.gc-plugin-ring circle { fill: none; stroke: var(--background-modifier-accent, #4e5058); stroke-width: 3; }
+.gc-plugin-ring .gc-plugin-ring-fill { stroke: var(--brand-500, #5865f2); stroke-linecap: round; }

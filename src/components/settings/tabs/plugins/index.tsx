@@ -75,9 +75,8 @@ function ReloadRequiredCard({ required, enabledPlugins, openWarningModal, resetC
                 </>
             ) : (
                 <>
-                    <Heading tag="h4">Plugin Management</Heading>
-                    <Paragraph>Press the cog wheel or info icon to get more info on a plugin</Paragraph>
-                    <Paragraph>Plugins with a cog wheel have settings you can modify!</Paragraph>
+                    <Heading tag="h4">Plugin Ecosystem Management</Heading>
+                    <Paragraph>Manage your Ghostcord and community plugins here. Enable, disable, and configure them to your liking.</Paragraph>
                 </>
             )}
             {enabledPlugins.length > 0 && !required && (
@@ -89,7 +88,7 @@ function ReloadRequiredCard({ required, enabledPlugins, openWarningModal, resetC
                         return openWarningModal(null, undefined, false, enabledPlugins.length, resetCheckAndDo);
                     }}
                 >
-                    Disable All Plugins
+                    Reset
                 </Button>
             )}
         </Card>
@@ -106,7 +105,8 @@ const enum SearchStatus {
     VENCORD,
     NEW,
     USER_PLUGINS,
-    API_PLUGINS
+    API_PLUGINS,
+    VENCORD_EQUICORD
 }
 
 export const ExcludedReasons: Record<PluginTarget, string> = {
@@ -218,6 +218,9 @@ export default function PluginSettings() {
                 break;
             case SearchStatus.EQUICORD:
                 if (!PluginMeta[plugin.name].folderName.startsWith("src/equicordplugins/")) return false;
+                break;
+            case SearchStatus.VENCORD_EQUICORD:
+                if (!/^src\/(plugins|equicordplugins)\//.test(PluginMeta[plugin.name].folderName)) return false;
                 break;
             case SearchStatus.GHOSTCORD:
                 if (!PluginMeta[plugin.name].folderName.startsWith("src/ghostcordplugins/")) return false;
@@ -366,6 +369,7 @@ export default function PluginSettings() {
         const enabledUserPlugins = enabledPlugins.filter(p => PluginMeta[p].userPlugin).length;
         return { totalStockPlugins, totalUserPlugins, enabledStockPlugins, enabledUserPlugins, enabledPlugins };
     }, [settings.plugins]);
+    const ghostcordPluginCount = useMemo(() => Object.keys(Plugins).filter(p => PluginMeta[p]?.folderName.startsWith("src/ghostcordplugins/") && !Plugins[p].hidden).length, []);
     const pluginsToLoad = Math.min(36, plugins.length);
     const [visibleCount, setVisibleCount] = React.useState(pluginsToLoad);
     const loadMore = React.useCallback(() => {
@@ -387,15 +391,27 @@ export default function PluginSettings() {
         <SettingsTab>
             <ReloadRequiredCard required={changes.hasChanges} enabledPlugins={enabledPlugins} openWarningModal={openWarningModal} resetCheckAndDo={resetCheckAndDo} />
 
-            <div className={cl("stats-container")}>
-                <StockPluginsCard
-                    totalStockPlugins={totalStockPlugins}
-                    enabledStockPlugins={enabledStockPlugins}
-                />
-                <UserPluginsCard
-                    totalUserPlugins={totalUserPlugins}
-                    enabledUserPlugins={enabledUserPlugins}
-                />
+            <div className="gc-plugin-stats">
+                <div className="gc-plugin-stat">
+                    <span className="gc-plugin-stat-label">TOTAL PLUGINS</span>
+                    <span className="gc-plugin-stat-value">{totalStockPlugins + totalUserPlugins}</span>
+                </div>
+                <div className="gc-plugin-stat">
+                    <span className="gc-plugin-stat-label">ENABLED PLUGINS</span>
+                    <span className="gc-plugin-stat-value">
+                        {enabledPlugins.length}
+                        <small> ({Math.round(enabledPlugins.length / Math.max(1, totalStockPlugins + totalUserPlugins) * 100)}%)</small>
+                        <svg className="gc-plugin-ring" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="8" />
+                            <circle cx="10" cy="10" r="8" className="gc-plugin-ring-fill"
+                                strokeDasharray={`${enabledPlugins.length / Math.max(1, totalStockPlugins + totalUserPlugins) * 50.27} 50.27`} />
+                        </svg>
+                    </span>
+                </div>
+                <div className="gc-plugin-stat">
+                    <span className="gc-plugin-stat-label">GHOSTCORD PLUGINS</span>
+                    <span className="gc-plugin-stat-value">{ghostcordPluginCount}</span>
+                </div>
             </div>
 
             <div className={cl("ui-elements")}>
@@ -409,7 +425,7 @@ export default function PluginSettings() {
             <ErrorBoundary noop>
                 <TextInput
                     inputClassName={cl("filter-control")}
-                    placeholder="Search for a plugin..."
+                    placeholder="Find a plugin, tag, or author..."
                     value={searchValue.value}
                     onChange={onSearch}
                     autoFocus
@@ -420,16 +436,15 @@ export default function PluginSettings() {
                 <div className={classes(Margins.bottom20, Margins.top8, cl("filter-controls"))}>
                     <Select
                         options={[
-                            { label: "Show All", value: SearchStatus.ALL, default: true },
-                            { label: "Show Favorites", value: SearchStatus.FAVORITES },
-                            { label: "Show Enabled", value: SearchStatus.ENABLED },
-                            { label: "Show Disabled", value: SearchStatus.DISABLED },
-                            { label: "Show Ghostcord", value: SearchStatus.GHOSTCORD },
-                            { label: "Show Equicord", value: SearchStatus.EQUICORD },
-                            { label: "Show Vencord", value: SearchStatus.VENCORD },
-                            { label: "Show New", value: SearchStatus.NEW },
-                            hasUserPlugins && { label: "Show UserPlugins", value: SearchStatus.USER_PLUGINS },
-                            { label: "Show API Plugins", value: SearchStatus.API_PLUGINS },
+                            { label: "All Plugins", value: SearchStatus.ALL, default: true },
+                            { label: "Ghostcord", value: SearchStatus.GHOSTCORD },
+                            { label: "Vencord & Equicord", value: SearchStatus.VENCORD_EQUICORD },
+                            { label: "Enabled Plugins", value: SearchStatus.ENABLED },
+                            { label: "Disabled Plugins", value: SearchStatus.DISABLED },
+                            { label: "Favorite Plugins", value: SearchStatus.FAVORITES },
+                            { label: "New Plugins", value: SearchStatus.NEW },
+                            hasUserPlugins && { label: "User Plugins", value: SearchStatus.USER_PLUGINS },
+                            { label: "API Plugins", value: SearchStatus.API_PLUGINS },
                         ].filter(isTruthy)}
                         serialize={String}
                         select={status => setSearchValue(prev => ({ ...prev, status }))}
