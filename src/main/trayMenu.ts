@@ -77,12 +77,12 @@ function createVencordMenuItems(): MenuItemConstructorOptions[] {
                         try {
                             const updateAvailable = await updater.fetchUpdate();
                             if (!updateAvailable) {
-                                return notify(window, "No Update Available", "You are already using the latest version of Equicord.");
+                                return notify(window, "No Update Available", "You are already using the latest version of Ghostcord.");
                             }
 
                             const result = await updater.applyUpdate();
                             if (!result) {
-                                return notify(window, "Update Failed", "Failed to apply the update for Equicord.");
+                                return notify(window, "Update Failed", "Failed to apply the update for Ghostcord.");
                             }
 
                             await notify(window, "Update Successful", "Now relaunching Ghostcord to apply the update.");

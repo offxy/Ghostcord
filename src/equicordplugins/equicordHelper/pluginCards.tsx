@@ -41,7 +41,7 @@ export function ChatPluginCard({ url, description }: { url: string, description:
     if (excludedPlugin || !p) {
         const toolTipText = excludedPlugin
             ? `${pluginName} is only available on the ${ExcludedReasons[ExcludedPlugins[pluginName]]}`
-            : "This plugin is not on this version of Equicord. Try updating!";
+            : "This plugin is not on this version of Ghostcord. Try updating!";
 
         const card = (
             <AddonCard
