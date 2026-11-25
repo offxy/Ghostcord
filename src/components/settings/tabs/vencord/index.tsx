@@ -179,45 +179,10 @@ function Switches() {
 }
 
 function EquicordSettings() {
-    const donateImage = useMemo(() =>
-        Math.random() > 0.5 ? DEFAULT_DONATE_IMAGE : SHIGGY_DONATE_IMAGE,
-        []
-    );
-
     const user = UserStore?.getCurrentUser();
 
     return (
         <SettingsTab>
-            {(isEquicordDonor(user?.id) || isVencordDonor(user?.id)) ? (
-                <SpecialCard
-                    className={isEquicordDonor(user?.id) && !isVencordDonor(user?.id) ? "vc-special-card-dark" : ""}
-                    title="Donations"
-                    subtitle="Thank you for donating!"
-                    description={
-                        isEquicordDonor(user?.id) && isVencordDonor(user?.id)
-                            ? "All Vencord users can see your Vencord donor badge, and Ghostcord users can see your Ghostcord donor badge. To change your Vencord donor badge, contact @vending.machine. For your Ghostcord donor badge, make a ticket in Ghostcord's server."
-                            : isVencordDonor(user?.id)
-                                ? "All Vencord users can see your badge! You can manage your perks by messaging @vending.machine."
-                                : "All Ghostcord users can see your badge! You can manage your perks by making a ticket in Ghostcord's server."
-                    }
-                    cardImage={isEquicordDonor(user?.id) && !isVencordDonor(user?.id) ? EQUICORD_DONOR_IMAGE : VENNIE_DONATOR_IMAGE}
-                    backgroundImage={DONOR_BACKGROUND_IMAGE}
-                    backgroundColor={isEquicordDonor(user?.id) && !isVencordDonor(user?.id) ? "#232428" : "#ED87A9"}
-                >
-                    <DonateButtonComponent donated={true} />
-                </SpecialCard>
-            ) : (
-                <SpecialCard
-                    className="vc-special-card-dark"
-                    title="Support the Project"
-                    description="Please consider supporting the development of Ghostcord by donating!"
-                    cardImage={donateImage}
-                    backgroundImage={DONOR_BACKGROUND_IMAGE}
-                    backgroundColor="#232428"
-                >
-                    <DonateButtonComponent />
-                </SpecialCard>
-            )}
             {isAnyPluginDev(user?.id) && (
                 <SpecialCard
                     title="Contributions"
