@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { EQUICORD_ICON } from "@shared/sourceIcons";
 import { GHOSTCORD_LOGO } from "@shared/ghostcordLogo";
 import "./styles.css";
 
@@ -70,7 +71,7 @@ function renderFilterLabel(o: { label: string; value: any; }) {
     let icon: React.ReactNode = null;
     switch (o.value) {
         case SearchStatus.GHOSTCORD: icon = <img src={GHOSTCORD_LOGO} style={FILTER_IMG} />; break;
-        case SearchStatus.VENCORD_EQUICORD: icon = <img src="https://equicord.org/assets/favicon.png" style={FILTER_IMG} />; break;
+        case SearchStatus.VENCORD_EQUICORD: icon = <img src={EQUICORD_ICON} style={FILTER_IMG} />; break;
         case SearchStatus.ALL: icon = <FilterSvg color="#b5bac1" d="M4 5h16v2H4zm0 6h16v2H4zm0 6h16v2H4z" />; break;
         case SearchStatus.ENABLED: icon = <FilterSvg color="#23a55a" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z" />; break;
         case SearchStatus.DISABLED: icon = <FilterSvg color="#80848e" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm5 11H7v-2h10v2Z" />; break;

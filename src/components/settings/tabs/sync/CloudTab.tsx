@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { EQUICORD_ICON, VENCORD_ICON } from "@shared/sourceIcons";
 import { GHOSTCORD_LOGO } from "@shared/ghostcordLogo";
 import { useSettings } from "@api/Settings";
 import { authorizeCloud, deauthorizeCloud } from "@api/SettingsSync/cloudSetup";
@@ -44,11 +45,11 @@ function GhostcordIcon() {
 }
 
 function EquicordIcon() {
-    return <img src="https://equicord.org/assets/favicon.png" alt="Equicord" style={ICON_STYLE} />;
+    return <img src={EQUICORD_ICON} alt="Equicord" style={ICON_STYLE} />;
 }
 
 function VencordIcon() {
-    return <img src="https://equicord.org/assets/icons/vencord/icon-light.png" alt="Vencord" style={ICON_STYLE} />;
+    return <img src={VENCORD_ICON} alt="Vencord" style={ICON_STYLE} />;
 }
 
 const RefreshIcon = findComponentByCodeLazy("M4 12a8 8 0 0 1 14.93-4H15");

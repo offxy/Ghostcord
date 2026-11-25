@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { EQUICORD_ICON, MODIFIED_ICON, USERPLUGIN_ICON, VENCORD_ICON } from "@shared/sourceIcons";
 import { GHOSTCORD_LOGO } from "@shared/ghostcordLogo";
 import { NoticeColors, showNotice } from "@api/Notices";
 import { hasAnyVisibleSettings, isPluginEnabled, pluginRequiresRestart, startDependenciesRecursive, startPlugin, stopPlugin } from "@api/PluginManager";
@@ -96,7 +97,7 @@ export function PluginCard({ plugin, disabled, onRestartNeeded, onMouseEnter, on
     const pluginInfo = [
         {
             condition: isModifiedPlugin,
-            src: "https://equicord.org/assets/icons/equicord/modified.png",
+            src: MODIFIED_ICON,
             alt: "Modified",
             title: "Modified Vencord Plugin"
         },
@@ -108,19 +109,19 @@ export function PluginCard({ plugin, disabled, onRestartNeeded, onMouseEnter, on
         },
         {
             condition: isEquicordPlugin,
-            src: "https://equicord.org/assets/favicon.png",
+            src: EQUICORD_ICON,
             alt: "Equicord",
             title: "Equicord Plugin"
         },
         {
             condition: isVencordPlugin,
-            src: "https://equicord.org/assets/icons/vencord/icon-light.png",
+            src: VENCORD_ICON,
             alt: "Vencord",
             title: "Vencord Plugin"
         },
         {
             condition: isUserPlugin,
-            src: "https://equicord.org/assets/icons/misc/userplugin.png",
+            src: USERPLUGIN_ICON,
             alt: "User",
             title: "User Plugin"
         }
