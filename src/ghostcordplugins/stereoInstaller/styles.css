@@ -6,7 +6,8 @@
 .gc-stereo-label { width: 200px; display: flex; flex-direction: column; }
 .gc-stereo-label b { color: var(--header-primary); font-size: 15px; }
 .gc-stereo-label span { font-size: 12px; color: var(--text-muted); }
-.gc-stereo-select, .gc-stereo-input { flex: 1; background: var(--input-background, var(--background-secondary)); color: var(--text-normal); border: 1px solid var(--border-subtle, #3f4147); border-radius: 6px; padding: 10px 12px; font-size: 14px; }
+.gc-stereo-select { flex: 1; }
+.gc-stereo-input { flex: 1; background: var(--input-background, var(--background-secondary)); color: var(--text-normal); border: 1px solid var(--border-subtle, #3f4147); border-radius: 6px; padding: 10px 12px; font-size: 14px; }
 .gc-stereo-input { width: 100%; box-sizing: border-box; font-family: var(--font-code); }
 .gc-stereo-chips { display: flex; gap: 8px; }
 .gc-stereo-chip { background: var(--background-modifier-accent, #3f4147); color: var(--text-normal) !important; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none !important; }
@@ -25,4 +26,15 @@
 .gc-stereo-detected { font-size: 13px; color: var(--text-muted); margin: 0; }
 .gc-stereo-logs { background: var(--background-secondary-alt, #232428); border-radius: 8px; padding: 12px; }
 .gc-stereo-logs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--header-primary); }
-.gc-stereo-logs pre { font-family: var(--font-code); font-size: 12px; color: var(--text-muted); white-space: pre-wrap; max-height: 220px; overflow: auto; margin: 0; }
+.gc-stereo-logs pre {
+    font-family: var(--font-code); font-size: 12px; line-height: 1.5; color: var(--text-normal);
+    white-space: pre-wrap; word-break: break-all; margin: 0;
+    min-height: 60px; max-height: 220px; overflow-y: auto; overflow-x: hidden; resize: none;
+    background: var(--background-tertiary, #1e1f22); border-radius: 6px; padding: 10px 12px;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar-thin-thumb, #1a1b1e) transparent;
+}
+.gc-stereo-logs pre::-webkit-scrollbar { width: 8px; }
+.gc-stereo-logs pre::-webkit-scrollbar-track { background: transparent; }
+.gc-stereo-logs pre::-webkit-scrollbar-thumb { background: var(--scrollbar-thin-thumb, #1a1b1e); border-radius: 8px; }
+.gc-stereo-logs pre::-webkit-scrollbar-corner, .gc-stereo-logs pre::-webkit-resizer { background: transparent; display: none; }
+.gc-stereo-logs-empty { color: var(--text-muted); font-style: italic; }

@@ -8,7 +8,7 @@ import SettingsPlugin from "@plugins/_core/settings";
 import { removeFromArray } from "@utils/misc";
 import definePlugin, { OptionType, PluginNative, StartAt } from "@utils/types";
 import { definePluginSettings } from "@api/Settings";
-import { React, useEffect, useState } from "@webpack/common";
+import { React, Select, useEffect, useState } from "@webpack/common";
 
 const Native = VencordNative.pluginHelpers.StereoInstaller as PluginNative<typeof import("./native")>;
 
@@ -67,9 +67,16 @@ function StereoTab() {
 
             <div className="gc-stereo-row">
                 <div className="gc-stereo-label"><b>Installer method</b><span>Use only one method at a time.</span></div>
-                <select className="gc-stereo-select" value={method} disabled={busy} onChange={e => (settings.store.method = e.currentTarget.value)}>
-                    {Object.entries(METHODS).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
-                </select>
+                <div className="gc-stereo-select">
+                    <Select
+                        options={Object.entries(METHODS).map(([value, m]) => ({ label: m.label, value }))}
+                        isSelected={v => v === method}
+                        select={v => { if (!busy) settings.store.method = v; }}
+                        serialize={v => v}
+                        isDisabled={busy}
+                        closeOnSelect
+                    />
+                </div>
             </div>
 
             <div className="gc-stereo-row">
@@ -114,7 +121,7 @@ function StereoTab() {
                     <b>Installer logs</b>
                     <button className="gc-btn gc-red gc-small" onClick={async () => { await Native.clearLogs(); refresh(); }}>Clear logs</button>
                 </div>
-                <pre>{logs.length ? logs.join("\n") : "No logs yet."}</pre>
+                <pre ref={el => { if (el) el.scrollTop = el.scrollHeight; }}>{logs.length ? logs.join("\n") : <span className="gc-stereo-logs-empty">No logs yet. Patch or revert to see what the installer does.</span>}</pre>
             </div>
         </div>
     );
