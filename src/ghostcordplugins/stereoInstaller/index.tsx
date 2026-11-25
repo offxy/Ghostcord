@@ -8,7 +8,8 @@ import SettingsPlugin from "@plugins/_core/settings";
 import { removeFromArray } from "@utils/misc";
 import definePlugin, { OptionType, PluginNative, StartAt } from "@utils/types";
 import { definePluginSettings } from "@api/Settings";
-import { React, Select, useEffect, useState } from "@webpack/common";
+import { relaunch } from "@utils/native";
+import { Alerts, React, Select, useEffect, useState } from "@webpack/common";
 
 const Native = VencordNative.pluginHelpers.StereoInstaller as PluginNative<typeof import("./native")>;
 
@@ -53,7 +54,22 @@ function StereoTab() {
         })();
     }, []);
 
-    const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); } finally { setBusy(false); refresh(); } };
+    const promptRestart = (what: string) => Alerts.show({
+        title: "Restart Discord?",
+        body: `${what} Discord needs a full restart to load the new voice files.`,
+        confirmText: "Restart now",
+        cancelText: "Later",
+        onConfirm: () => relaunch()
+    });
+
+    const run = async (fn: () => Promise<{ ok: boolean; error?: string; }>, success: string) => {
+        setBusy(true);
+        try {
+            const res = await fn();
+            if (res?.ok) promptRestart(success);
+            else Alerts.show({ title: "StereoInstaller", body: res?.error ?? "Something went wrong. Check the installer logs.", confirmText: "OK" });
+        } finally { setBusy(false); refresh(); }
+    };
     const lastPatch = info?.lastPatch?.[method];
     const methodLabel = METHODS[method]?.label ?? method;
 
@@ -93,8 +109,8 @@ function StereoTab() {
             <div className="gc-stereo-buttons">
                 <button className="gc-btn" disabled={busy} onClick={async () => { const p = await Native.autoDetect(); settings.store.discordPath = p; refresh(p); }}>Auto-detect</button>
                 <button className="gc-btn" disabled={busy} onClick={async () => { const p = await Native.browse(); if (p) { settings.store.discordPath = p; refresh(p); } }}>Browse</button>
-                <button className="gc-btn gc-green" disabled={busy || !discordPath} onClick={() => run(() => Native.patch(discordPath, method, settings.store.apiUrl))}>{busy ? "Working..." : "Patch Discord voice"}</button>
-                <button className="gc-btn gc-red" disabled={busy || !info?.hasBackup} onClick={() => run(() => Native.revert(discordPath))}>Revert to backup</button>
+                <button className="gc-btn gc-green" disabled={busy || !discordPath} onClick={() => run(() => Native.patch(discordPath, method, settings.store.apiUrl), "Stereo voice installed.")}>{busy ? "Working..." : "Patch Discord voice"}</button>
+                <button className="gc-btn gc-red" disabled={busy || !info?.hasBackup} onClick={() => run(() => Native.revert(discordPath), "Original voice files restored.")}>Revert to backup</button>
             </div>
 
             <div className="gc-stereo-status">
