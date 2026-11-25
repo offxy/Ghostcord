@@ -38,3 +38,4 @@ jobs:
               run: |
                   gh release view latest >/dev/null 2>&1 || gh release create latest --title "Ghostcord" --notes "Auto-built on every push to main."
                   gh release upload latest release/* --clobber
+                  gh release edit latest --title "Ghostcord $GITHUB_SHA"
