@@ -39,8 +39,12 @@ import { Alerts, SearchableSelect, Select, useState } from "@webpack/common";
 
 const ICON_STYLE: React.CSSProperties = { width: 20, height: 20, borderRadius: 4, verticalAlign: "middle" };
 
-function EquicordIcon() {
+function GhostcordIcon() {
     return <img src={GHOSTCORD_LOGO} alt="Ghostcord" style={ICON_STYLE} />;
+}
+
+function EquicordIcon() {
+    return <img src="https://equicord.org/assets/favicon.png" alt="Equicord" style={ICON_STYLE} />;
 }
 
 function VencordIcon() {
@@ -130,7 +134,7 @@ function CloudTab() {
                     value={cloudBackendOptions.find(o => o.value === cloud.url)?.value}
                     onChange={v => changeUrl(v)}
                     closeOnSelect={true}
-                    renderOptionPrefix={o => o?.value?.includes("equicord") ? <EquicordIcon /> : <VencordIcon />}
+                    renderOptionPrefix={o => o?.value?.includes("equicord") ? <EquicordIcon /> : o?.value?.includes("vencord") ? <VencordIcon /> : <GhostcordIcon />}
                 />
             </div>
 
