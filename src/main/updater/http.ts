@@ -26,18 +26,24 @@ import gitRemote from "~git-remote";
 import { Updater } from ".";
 import { ASAR_FILE } from "./common";
 
-const API_BASE = `https://api.github.com/repos/${gitRemote}`;
+const GITHUB_BASE = `https://api.github.com/repos/${gitRemote}`;
+// Ghostcord API caches GitHub responses so users never hit GitHub's rate limit.
+const PROXY_BASE = "https://194-238-31-149.sslip.io/v1/gh";
 let PendingUpdate: string | null = null;
 
-async function githubGet<T = any>(endpoint: string) {
-    return fetchJson<T>(API_BASE + endpoint, {
-        headers: {
-            Accept: "application/vnd.github+json",
-            // "All API requests MUST include a valid User-Agent header.
-            // Requests with no User-Agent header will be rejected."
-            "User-Agent": VENCORD_USER_AGENT
-        }
-    });
+async function githubGet<T = any>(endpoint: string): Promise<T> {
+    const headers = {
+        Accept: "application/vnd.github+json",
+        // "All API requests MUST include a valid User-Agent header.
+        // Requests with no User-Agent header will be rejected."
+        "User-Agent": VENCORD_USER_AGENT
+    };
+    try {
+        return await fetchJson<T>(PROXY_BASE + endpoint, { headers });
+    } catch (e) {
+        console.warn("[Ghostcord] Update proxy failed, falling back to GitHub", e);
+        return fetchJson<T>(GITHUB_BASE + endpoint, { headers });
+    }
 }
 
 // The "latest" release is titled "Ghostcord <full sha>" by the release workflow.
