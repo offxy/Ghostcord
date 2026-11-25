@@ -120,18 +120,23 @@ async function syncSettings() {
 }
 
 let notifiedForUpdatesThisSession = false;
+// Once an update is installed, the running code is still the old build until restart.
+// Without this flag every later check would re-download the same update.
+let updatedThisSession = false;
 
 async function runUpdateCheck() {
-    if (IS_UPDATER_DISABLED) return;
+    if (IS_UPDATER_DISABLED || updatedThisSession) return;
 
     try {
         const isOutdated = await checkForUpdates();
         if (!isOutdated) return;
 
         if (Settings.autoUpdate) {
-            await update();
-            if (Settings.autoUpdateNotification) {
-                if (notifiedForUpdatesThisSession) return;
+            const installed = await update();
+            if (!installed) return;
+            updatedThisSession = true;
+
+            if (Settings.autoUpdateNotification && !notifiedForUpdatesThisSession) {
                 notifiedForUpdatesThisSession = true;
 
                 showNotice(
@@ -139,6 +144,13 @@ async function runUpdateCheck() {
                     "Restart",
                     relaunch
                 );
+                showNotification({
+                    title: "Ghostcord updated",
+                    body: "A new version was installed in the background. Click to restart Discord and apply it.",
+                    permanent: false,
+                    noPersist: true,
+                    onClick: relaunch
+                });
             }
             return;
         }
@@ -165,10 +177,9 @@ async function init() {
     if (!IS_DEV && !IS_WEB && !IS_UPDATER_DISABLED) {
         runUpdateCheck();
 
-        // this tends to get really annoying, so only do this if the user has auto-update without notification enabled
-        if (Settings.autoUpdate && !Settings.autoUpdateNotification) {
-            setInterval(runUpdateCheck, 1000 * 60 * 30); // 30 minutes
-        }
+        // Keep checking while Discord is open. Notices only show once per session,
+        // and checks stop after an update is installed (see updatedThisSession).
+        setInterval(runUpdateCheck, 1000 * 60 * 30); // 30 minutes
     }
 
     if (IS_DEV) {

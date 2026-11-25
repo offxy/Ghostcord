@@ -34,12 +34,24 @@ function newest(names: string[]) {
     }).at(-1);
 }
 
+function listDir(dir: string): string[] {
+    // original-fs bypasses Electron's asar layer, which can hide real folders
+    let fs: typeof import("fs");
+    try { fs = require("original-fs"); } catch { fs = require("fs"); }
+    try {
+        return fs.readdirSync(dir);
+    } catch (e: any) {
+        throw new Error(`Can't read ${dir}: ${e?.code ?? e?.message ?? e}`);
+    }
+}
+
 async function findVoiceDir(root: string) {
-    const apps = (await readdir(root).catch(() => [])).filter(n => n.startsWith("app-"));
+    root = root.trim().replace(/[\\/]+$/, "");
+    const apps = listDir(root).filter(n => /^app-\d/.test(n));
     const app = newest(apps);
-    if (!app) throw new Error("No app-* folder found in " + root);
+    if (!app) throw new Error(`No app-* folder found in ${root} (found: ${listDir(root).slice(0, 8).join(", ") || "nothing"})`);
     const modules = path.join(root, app, "modules");
-    const voice = newest((await readdir(modules).catch(() => [])).filter(n => n.startsWith("discord_voice")));
+    const voice = newest(listDir(modules).filter(n => n.startsWith("discord_voice")));
     if (!voice) throw new Error("No discord_voice module found (join a voice channel once so Discord downloads it).");
     let dir = path.join(modules, voice);
     if (existsSync(path.join(dir, "discord_voice"))) dir = path.join(dir, "discord_voice");
