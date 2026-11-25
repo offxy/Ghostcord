@@ -4,10 +4,11 @@
 
 import "./styles.css";
 
+import { addProfileBadge, BadgePosition, ProfileBadge, removeProfileBadge } from "@api/Badges";
 import { GHOSTCORD_LOGO } from "@shared/ghostcordLogo";
 import { Logger } from "@utils/Logger";
 import definePlugin from "@utils/types";
-import { React, UserStore, useEffect, useState } from "@webpack/common";
+import { React, Tooltip, UserStore, useEffect, useState } from "@webpack/common";
 
 const API = "https://194-238-31-149.sslip.io/v1/users";
 const logger = new Logger("GhostcordPresence");
@@ -50,7 +51,7 @@ function formatDuration(ms: number) {
     return `${d}d ${h % 24}h`;
 }
 
-function GhostcordPresence({ userId }: { userId: string; isSideBar: boolean; }) {
+function useOnlineSince(userId: string) {
     const [, rerender] = useState(0);
     useEffect(() => {
         const l = () => rerender(n => n + 1);
@@ -58,40 +59,55 @@ function GhostcordPresence({ userId }: { userId: string; isSideBar: boolean; }) 
         const tick = setInterval(l, 30_000); // keep the timer moving
         return () => { listeners.delete(l); clearInterval(tick); };
     }, []);
+    return online[userId];
+}
 
-    const since = online[userId];
+// Rendered in the badge row, which exists in every profile view (popouts, own panel, full profile, sidebar).
+function GhostcordPill({ userId }: { userId: string; }) {
+    const since = useOnlineSince(userId);
     if (!since) return null;
-
+    const time = formatDuration(Date.now() - since);
     return (
-        <div className="gc-presence" title="This user is using Ghostcord right now">
-            <img src={GHOSTCORD_LOGO} className="gc-presence-logo" alt="" />
-            <span className="gc-presence-text">Using <b>Ghostcord</b></span>
-            <span className="gc-presence-dot" />
-            <span className="gc-presence-time">for {formatDuration(Date.now() - since)}</span>
-        </div>
+        <Tooltip text={`Using Ghostcord for ${time}`}>
+            {props => (
+                <span {...props} className="gc-presence">
+                    <img src={GHOSTCORD_LOGO} className="gc-presence-logo" alt="" />
+                    <span className="gc-presence-text"><b>Ghostcord</b></span>
+                    <span className="gc-presence-dot" />
+                    <span className="gc-presence-time">{time}</span>
+                </span>
+            )}
+        </Tooltip>
     );
 }
+
+const badge: ProfileBadge = {
+    id: "ghostcord_presence",
+    key: "ghostcord_presence",
+    description: "Using Ghostcord",
+    position: BadgePosition.START,
+    shouldShow: ({ userId }) => !!userId && !!online[userId],
+    component: ({ userId }) => <GhostcordPill userId={userId} />,
+};
 
 export default definePlugin({
     name: "GhostcordPresence",
     description: "Shows 'Using Ghostcord' and how long on the profiles of people who are on Ghostcord right now.",
     authors: [{ name: "offxy", id: 1402331570525835275n }],
     required: true,
-    dependencies: ["ProfileSectionsAPI"],
-    renderProfileSection: {
-        render: props => <GhostcordPresence {...props} />,
-        priority: 100,
-    },
+    dependencies: ["BadgeAPI"],
     flux: {
         CONNECTION_OPEN() { ping(); }
     },
     async start() {
+        addProfileBadge(badge);
         await ping();
         await loadOnline();
         pingTimer = setInterval(ping, 2 * 60_000);
         listTimer = setInterval(loadOnline, 60_000);
     },
     stop() {
+        removeProfileBadge(badge);
         clearInterval(pingTimer);
         clearInterval(listTimer);
     },
