@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { GHOSTCORD_LOGO } from "@shared/ghostcordLogo";
 import "./styles.css";
 
 import * as DataStore from "@api/DataStore";
@@ -58,6 +59,27 @@ function showErrorToast(message: string) {
         variant: "critical",
         position: "bottom"
     });
+}
+
+
+const FILTER_IMG: React.CSSProperties = { width: 18, height: 18, borderRadius: 4, objectFit: "contain" };
+const FilterSvg = ({ color, d }: { color: string; d: string; }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill={color} style={{ flexShrink: 0 }}><path d={d} /></svg>
+);
+function renderFilterLabel(o: { label: string; value: any; }) {
+    let icon: React.ReactNode = null;
+    switch (o.value) {
+        case SearchStatus.GHOSTCORD: icon = <img src={GHOSTCORD_LOGO} style={FILTER_IMG} />; break;
+        case SearchStatus.VENCORD_EQUICORD: icon = <img src="https://equicord.org/assets/favicon.png" style={FILTER_IMG} />; break;
+        case SearchStatus.ALL: icon = <FilterSvg color="#b5bac1" d="M4 5h16v2H4zm0 6h16v2H4zm0 6h16v2H4z" />; break;
+        case SearchStatus.ENABLED: icon = <FilterSvg color="#23a55a" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7Z" />; break;
+        case SearchStatus.DISABLED: icon = <FilterSvg color="#80848e" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm5 11H7v-2h10v2Z" />; break;
+        case SearchStatus.FAVORITES: icon = <FilterSvg color="#f0b232" d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z" />; break;
+        case SearchStatus.NEW: icon = <FilterSvg color="#f23f43" d="M12 2 9.5 8.5 3 9.3l5 4.3L6.6 20 12 16.8 17.4 20 16 13.6l5-4.3-6.5-.8L12 2Z" />; break;
+        case SearchStatus.USER_PLUGINS: icon = <FilterSvg color="#e67e22" d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v3.8h1.5a2.7 2.7 0 0 1 0 5.4H2V20a2 2 0 0 0 2 2h3.8v-1.5a2.7 2.7 0 0 1 5.4 0V22H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5Z" />; break;
+        case SearchStatus.API_PLUGINS: icon = <FilterSvg color="#5865f2" d="M8.7 16.6 4.1 12l4.6-4.6L7.3 6 1.3 12l6 6 1.4-1.4Zm6.6 0 4.6-4.6-4.6-4.6L16.7 6l6 6-6 6-1.4-1.4Z" />; break;
+    }
+    return <span style={{ display: "flex", alignItems: "center", gap: 10 }}>{icon}{o.label}</span>;
 }
 
 function ReloadRequiredCard({ required, enabledPlugins, openWarningModal, resetCheckAndDo }) {
@@ -400,13 +422,12 @@ export default function PluginSettings() {
                     <span className="gc-plugin-stat-label">ENABLED PLUGINS</span>
                     <span className="gc-plugin-stat-value">
                         {enabledPlugins.length}
-                        <small> ({Math.round(enabledPlugins.length / Math.max(1, totalStockPlugins + totalUserPlugins) * 100)}%)</small>
-                        <svg className="gc-plugin-ring" viewBox="0 0 20 20">
-                            <circle cx="10" cy="10" r="8" />
-                            <circle cx="10" cy="10" r="8" className="gc-plugin-ring-fill"
-                                strokeDasharray={`${enabledPlugins.length / Math.max(1, totalStockPlugins + totalUserPlugins) * 50.27} 50.27`} />
-                        </svg>
+                        <small>/ {(totalStockPlugins + totalUserPlugins)}</small>
                     </span>
+                    <div className="gc-plugin-bar" title={`${Math.round(enabledPlugins.length / Math.max(1, (totalStockPlugins + totalUserPlugins)) * 100)}% enabled`}>
+                        <i style={{ width: `${Math.max(2, enabledPlugins.length / Math.max(1, (totalStockPlugins + totalUserPlugins)) * 100)}%` }} />
+                    </div>
+                    <span className="gc-plugin-stat-sub">{Math.round(enabledPlugins.length / Math.max(1, (totalStockPlugins + totalUserPlugins)) * 100)}% enabled</span>
                 </div>
                 <div className="gc-plugin-stat">
                     <span className="gc-plugin-stat-label">GHOSTCORD PLUGINS</span>
@@ -451,6 +472,7 @@ export default function PluginSettings() {
                         isSelected={v => v === searchValue.status}
                         closeOnSelect={true}
                         placeholder="Filter by Type"
+                        renderOptionLabel={renderFilterLabel}
                     />
                     <SearchableSelect
                         options={PluginTags.map(tag => ({ label: tag, value: tag }))}
