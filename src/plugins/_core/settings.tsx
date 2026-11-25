@@ -5,7 +5,7 @@
  */
 
 import { definePluginSettings } from "@api/Settings";
-import { BackupRestoreIcon, CloudIcon, LogIcon, MainSettingsIcon, PaintbrushIcon, PatchHelperIcon, PluginsIcon, UpdaterIcon } from "@components/Icons";
+import { BackupRestoreIcon, CloudIcon, GhostIcon, LogIcon, MainSettingsIcon, PaintbrushIcon, PatchHelperIcon, PluginsIcon, UpdaterIcon } from "@components/Icons";
 import {
     BackupAndRestoreTab,
     ChangelogTab,
@@ -189,7 +189,7 @@ export default definePlugin({
                 title: "Ghostcord",
                 panelTitle: "Ghostcord Settings",
                 Component: VencordTab,
-                Icon: MainSettingsIcon
+                Icon: GhostIcon
             }),
             buildEntry({
                 key: "equicord_plugins",

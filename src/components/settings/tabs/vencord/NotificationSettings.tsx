@@ -21,7 +21,7 @@ export function NotificationSection() {
         <section className={Margins.top16}>
             <Heading className={Margins.bottom8}>Notifications</Heading>
             <Paragraph className={Margins.bottom8}>
-                Settings for Notifications sent by Vencord.
+                Settings for Notifications sent by Ghostcord.
                 This does NOT include Discord notifications (messages, etc)
             </Paragraph>
             <Flex>

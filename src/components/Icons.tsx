@@ -1648,3 +1648,18 @@ export function HistoryIcon(props: IconProps) {
         </Icon>
     );
 }
+
+export function GhostIcon(props: IconProps) {
+    return (
+        <Icon
+            {...props}
+            viewBox="0 0 24 24"
+        >
+            <path
+                fill={props.fill || "currentColor"}
+                fillRule="evenodd"
+                d="M12 2C7.58 2 4 5.58 4 10v10.6c0 .9 1.08 1.34 1.7.7l1.3-1.3 1.3 1.3a1 1 0 0 0 1.4 0L12 19.6l2.3 1.7a1 1 0 0 0 1.4 0l1.3-1.3 1.3 1.3c.62.64 1.7.2 1.7-.7V10c0-4.42-3.58-8-8-8ZM9 8.5a1.5 1.5 0 0 0-1.5 1.5v1a1.5 1.5 0 0 0 3 0v-1A1.5 1.5 0 0 0 9 8.5Zm6 0a1.5 1.5 0 0 0-1.5 1.5v1a1.5 1.5 0 0 0 3 0v-1A1.5 1.5 0 0 0 15 8.5Z"
+            />
+        </Icon>
+    );
+}
