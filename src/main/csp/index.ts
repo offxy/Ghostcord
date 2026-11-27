@@ -29,6 +29,9 @@ export const CspPolicies: PolicyMap = {
     "ws://127.0.0.1:*": ConnectSrc,
 
     "themes.equicord.org": ImageAndCssSrc, // Theme Library downloads
+    "*.pages.dev": ImageAndCssSrc, // Cloudflare Pages, used by some themes (e.g. Mica)
+    "*.netlify.app": ImageAndCssSrc, // Netlify, used by some themes
+    "*.vercel.app": ImageAndCssSrc, // Vercel, used by some themes
     "*.github.io": ImageAndCssSrc, // GitHub pages, used by most themes
     "github.com": ImageMediaAndCssSrc, // GitHub content (stuff uploaded to markdown forms), used by most themes
     "raw.githubusercontent.com": ImageMediaAndCssSrc, // GitHub raw, used by some themes
