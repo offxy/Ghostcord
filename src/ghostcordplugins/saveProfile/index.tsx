@@ -12,6 +12,7 @@ import definePlugin from "@utils/types";
 import { IconUtils, Menu, React, UserProfileStore, useEffect, UserStore, useState } from "@webpack/common";
 
 import { confirmGc, GcButton, GcModal, openGc, toast } from "../_gc";
+import { vaultGet, vaultPutSoon } from "../_gc/api";
 import { GC_AUTHOR } from "../_gc/voice";
 
 const KEY = "gc-saved-profiles";
@@ -22,6 +23,26 @@ interface Saved {
 }
 
 async function all(): Promise<Saved[]> { return (await DataStore.get<Saved[]>(KEY)) ?? []; }
+
+/** Save locally and back up to your Ghostcord API. */
+async function store(list: Saved[]) {
+    await DataStore.set(KEY, list);
+    vaultPutSoon("saved-profiles", all);
+}
+
+/** Pull the backup from the API and merge it with what's on this PC. */
+async function syncDown() {
+    try {
+        const remote = await vaultGet<Saved[]>("saved-profiles");
+        if (!remote?.data?.length) return;
+        const local = await all();
+        const key = (s: Saved) => `${s.id}:${s.savedAt}`;
+        const seen = new Set(local.map(key));
+        const merged = [...local, ...remote.data.filter(s => !seen.has(key(s)))].sort((a, b) => b.savedAt - a.savedAt).slice(0, 300);
+        await DataStore.set(KEY, merged);
+        if (merged.length !== remote.data.length) vaultPutSoon("saved-profiles", all);
+    } catch { }
+}
 
 async function toDataUrl(url?: string) {
     if (!url) return undefined;
@@ -48,7 +69,7 @@ async function save(userId: string) {
         savedAt: Date.now()
     };
     const list = await all();
-    await DataStore.set(KEY, [entry, ...list].slice(0, 300));
+    await store([entry, ...list].slice(0, 300));
     toast(`Saved ${entry.globalName ?? entry.username}'s profile`, "success");
 }
 
@@ -76,18 +97,18 @@ function Card({ s, onDelete }: { s: Saved; onDelete(): void; }) {
 function Browser({ close }: { close(): void; }) {
     const [list, setList] = useState<Saved[] | null>(null);
     const [q, setQ] = useState("");
-    useEffect(() => { all().then(setList); }, []);
+    useEffect(() => { all().then(setList); syncDown().then(() => all().then(setList)); }, []);
     const s = q.toLowerCase();
     const shown = (list ?? []).filter(p => !s || p.username.toLowerCase().includes(s) || p.globalName?.toLowerCase().includes(s) || p.id.includes(s));
     const remove = async (i: Saved) => {
         const next = (list ?? []).filter(p => p !== i);
-        await DataStore.set(KEY, next);
+        await store(next);
         setList(next);
     };
     return (
         <GcModal title="Saved profiles" subtitle={list ? `${list.length} saved` : "Loading…"} wide onClose={close}
             footer={list?.length ? <GcButton kind="danger" onClick={async () => {
-                if (await confirmGc("Delete all saved profiles?", "This can't be undone.", "Delete all")) { await DataStore.set(KEY, []); setList([]); }
+                if (await confirmGc("Delete all saved profiles?", "This deletes them here and from your Ghostcord backup.", "Delete all")) { await store([]); setList([]); }
             }}>Delete all</GcButton> : undefined}>
             <input className="gc-input" placeholder="Search saved profiles" value={q} onChange={e => setQ((e.target as HTMLInputElement).value)} />
             {list && !shown.length && <div className="gc-empty">No saved profiles yet. Right-click someone → Save Profile.</div>}
@@ -110,8 +131,9 @@ const userMenu: NavContextMenuPatchCallback = (children, { user }) => {
 
 export default definePlugin({
     name: "SaveProfile",
-    description: "Snapshot anyone's profile (name, avatar, banner, bio) and browse your saved ones later.",
+    description: "Snapshot anyone's profile (name, avatar, banner, bio) and browse them later. Backed up to your Ghostcord account.",
     authors: [GC_AUTHOR],
     contextMenus: { "user-context": userMenu },
-    toolboxActions: { "Saved profiles…": openBrowser }
+    toolboxActions: { "Saved profiles…": openBrowser },
+    start() { syncDown(); }
 });

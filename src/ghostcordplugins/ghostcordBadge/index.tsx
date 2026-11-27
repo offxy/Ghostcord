@@ -32,13 +32,46 @@ async function ping() {
     }
 }
 
-async function loadOnline() {
+// The API only tells us about the users we ask for, so we batch up the profiles that are on screen.
+const checked = new Map<string, number>(); // userId -> last checked
+const queue = new Set<string>();
+let queueTimer: ReturnType<typeof setTimeout> | undefined;
+
+const viewed = new Map<string, number>(); // userId -> last time a profile with them was on screen
+
+function want(userId: string, force = false) {
+    if (!userId) return;
+    viewed.set(userId, Date.now());
+    if (!force && Date.now() - (checked.get(userId) ?? 0) < 60_000) return;
+    queue.add(userId);
+    clearTimeout(queueTimer);
+    queueTimer = setTimeout(flush, 250);
+}
+
+async function flush() {
+    const ids = [...queue].slice(0, 100);
+    ids.forEach(id => { queue.delete(id); checked.set(id, Date.now()); });
+    if (!ids.length) return;
     try {
-        online = await fetch(API + "/online").then(r => r.json());
+        const res: Record<string, number> = await fetch(`${API}/online?ids=${ids.join(",")}`, { cache: "no-store" }).then(r => r.json());
+        const me = UserStore.getCurrentUser()?.id;
+        for (const id of ids) { if (id !== me) delete online[id]; }
+        Object.assign(online, res);
         listeners.forEach(l => l());
     } catch (e) {
-        logger.error("Couldn't load online users", e);
+        logger.error("Couldn't check who's on Ghostcord", e);
     }
+    if (queue.size) flush();
+}
+
+function loadOnline() {
+    // re-check people whose profiles were on screen in the last 10 minutes
+    const cutoff = Date.now() - 10 * 60_000;
+    for (const [id, t] of viewed) {
+        if (t < cutoff) { viewed.delete(id); checked.delete(id); continue; }
+        queue.add(id);
+    }
+    if (queue.size) flush();
 }
 
 function formatDuration(ms: number) {
@@ -58,6 +91,7 @@ function useOnlineSince(userId: string) {
         const tick = setInterval(l, 30_000); // keep the timer moving
         return () => { listeners.delete(l); clearInterval(tick); };
     }, []);
+    useEffect(() => { want(userId); }, [userId]);
     return online[userId];
 }
 

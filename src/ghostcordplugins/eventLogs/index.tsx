@@ -11,6 +11,7 @@ import definePlugin, { OptionType } from "@utils/types";
 import { ChannelStore, GuildStore, React, RelationshipStore, useEffect, UserStore, useState } from "@webpack/common";
 
 import { confirmGc, GcButton, GcModal, openGc, toast } from "../_gc";
+import { vaultGet, vaultPutSoon } from "../_gc/api";
 import { GC_AUTHOR } from "../_gc/voice";
 
 const KEY = "gc-event-logs";
@@ -35,7 +36,23 @@ async function log(kind: Kind, text: string, id?: string) {
     if (!ready) return;
     const list = (await DataStore.get<Ev[]>(KEY)) ?? [];
     await DataStore.set(KEY, [{ t: Date.now(), kind, text, id }, ...list].slice(0, settings.store.max));
+    vaultPutSoon("event-logs", getAll);
     if (settings.store.notify) toast(`${LABEL[kind][0]}: ${text}`, kind.endsWith("-") || kind === "block" ? "error" : "info");
+}
+
+const getAll = async () => (await DataStore.get<Ev[]>(KEY)) ?? [];
+
+async function syncDown() {
+    try {
+        const remote = await vaultGet<Ev[]>("event-logs");
+        if (!remote?.data?.length) return;
+        const local = await getAll();
+        const k = (e: Ev) => `${e.t}:${e.kind}:${e.id ?? ""}`;
+        const seen = new Set(local.map(k));
+        const merged = [...local, ...remote.data.filter(e => !seen.has(k(e)))].sort((a, b) => b.t - a.t).slice(0, settings.store.max);
+        await DataStore.set(KEY, merged);
+        if (merged.length !== remote.data.length) vaultPutSoon("event-logs", getAll);
+    } catch { }
 }
 
 const name = (id: string) => { const u: any = UserStore.getUser(id); return u ? (u.globalName ?? u.username) : id; };
@@ -43,7 +60,7 @@ const name = (id: string) => { const u: any = UserStore.getUser(id); return u ? 
 function Viewer({ close }: { close(): void; }) {
     const [list, setList] = useState<Ev[] | null>(null);
     const [filter, setFilter] = useState<"all" | "friends" | "servers" | "groups">("all");
-    useEffect(() => { DataStore.get<Ev[]>(KEY).then(l => setList(l ?? [])); }, []);
+    useEffect(() => { getAll().then(setList); syncDown().then(() => getAll().then(setList)); }, []);
     const shown = (list ?? []).filter(e => filter === "all"
         || (filter === "friends" && ["friend+", "friend-", "request", "block"].includes(e.kind))
         || (filter === "servers" && e.kind.startsWith("guild"))
@@ -51,7 +68,7 @@ function Viewer({ close }: { close(): void; }) {
     return (
         <GcModal title="Event logs" subtitle={list ? `${list.length} events recorded` : "Loading…"} wide onClose={close}
             footer={<GcButton kind="danger" disabled={!list?.length} onClick={async () => {
-                if (await confirmGc("Clear event logs?", "All recorded events will be deleted.", "Clear")) { await DataStore.set(KEY, []); setList([]); }
+                if (await confirmGc("Clear event logs?", "Deletes them here and from your Ghostcord backup.", "Clear")) { await DataStore.set(KEY, []); vaultPutSoon("event-logs", getAll, 0); setList([]); }
             }}>Clear</GcButton>}>
             <div className="gc-el-tabs">
                 {(["all", "friends", "servers", "groups"] as const).map(f =>
@@ -78,7 +95,7 @@ export const openLogs = () => openGc(close => <Viewer close={close} />);
 
 export default definePlugin({
     name: "EventLogs",
-    description: "Keeps a timeline of friends added/removed, servers joined/left/kicked, groups and blocks.",
+    description: "Keeps a timeline of friends added/removed, servers joined/left/kicked, groups and blocks. Backed up to your Ghostcord account.",
     authors: [GC_AUTHOR],
     settings,
     toolboxActions: { "Event logs": openLogs },
@@ -114,6 +131,7 @@ export default definePlugin({
     },
     start() {
         Object.values(GuildStore.getGuilds()).forEach(g => guildNames.set(g.id, g.name));
+        syncDown();
         setTimeout(() => { ready = true; }, 15_000); // skip the startup flood
     },
     stop() { ready = false; }
