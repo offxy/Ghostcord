@@ -105,7 +105,13 @@ const BagIcon = ({ className }: { className?: string; }) => (
 function BackpackBar({ buttons }: { buttons: ReactNode; }) {
     useBackpack();
     const [open, setOpen] = useState(false);
+    const [settled, setSettled] = useState(false); // drawer finished opening → stop clipping
     const root = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!open) { setSettled(false); return; }
+        const t = setTimeout(() => setSettled(true), 340);
+        return () => clearTimeout(t);
+    }, [open]);
     const { entries, props } = collect(buttons);
 
     // close on outside click / Esc — but not while a packed button's picker, popup or modal is open
@@ -129,7 +135,7 @@ function BackpackBar({ buttons }: { buttons: ReactNode; }) {
     const onBar = entries.filter(e => unpacked!.has(e.id));
 
     return (
-        <div ref={root} className={`gc-bp-bar${open ? " gc-bp-open" : ""}`}>
+        <div ref={root} className={`gc-bp-bar${open ? " gc-bp-open" : ""}${settled ? " gc-bp-settled" : ""}`}>
             {onBar.map(e => <React.Fragment key={e.id}>{e.node}</React.Fragment>)}
             <div className="gc-bp-drawer" aria-hidden={!open}>
                 <div className="gc-bp-drawer-inner">
