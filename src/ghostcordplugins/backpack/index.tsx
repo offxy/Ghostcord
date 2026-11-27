@@ -78,16 +78,36 @@ function collect(buttons: ReactNode): { entries: Entry[]; props: any; } {
 }
 
 const APPS_ID = "native:apps-launcher";
-const LAUNCHER = '[class*="channelAppLauncher"]';
+const LAUNCHER = "[data-gc-bp-launcher]";
 
-function findLauncher(from: HTMLElement | null) {
+/**
+ * Discord renders the Apps button outside the button row we get, right after it.
+ * Find it by walking up from our bar and taking the next sibling that holds a button.
+ */
+function tagLauncher(from: HTMLElement | null) {
+    const bar = from?.closest('[class*="channelTextArea"], form') ?? document;
+    const known = bar.querySelector<HTMLElement>(LAUNCHER);
+    if (known?.isConnected) return known;
     let el: HTMLElement | null = from;
-    for (let i = 0; el && i < 6; i++, el = el.parentElement) {
-        const hit = el.querySelector<HTMLElement>(LAUNCHER);
-        if (hit) return hit;
+    for (let i = 0; el && i < 5; i++, el = el.parentElement) {
+        let sib = el.nextElementSibling as HTMLElement | null;
+        while (sib) {
+            const small = sib.getBoundingClientRect().width <= 64; // a single icon button, never a whole region
+            if (small && !sib.contains(from) && (sib.matches('button, [role="button"]') || sib.querySelector('button, [role="button"]'))) {
+                sib.setAttribute("data-gc-bp-launcher", "");
+                return sib;
+            }
+            sib = sib.nextElementSibling as HTMLElement | null;
+        }
     }
-    return document.querySelector<HTMLElement>(LAUNCHER);
+    // fallback: anything labelled "Apps" in this chat bar
+    const byLabel = bar.querySelector<HTMLElement>('[aria-label="Apps"], [aria-label*="App Launcher" i], [class*="AppLauncher"], [class*="appLauncher"]');
+    const host = byLabel?.closest<HTMLElement>('[class*="buttonContainer"], [class*="container"]') ?? byLabel;
+    host?.setAttribute("data-gc-bp-launcher", "");
+    return host ?? null;
 }
+
+const findLauncher = (from: HTMLElement | null) => tagLauncher(from);
 
 const AppsIcon = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -116,7 +136,7 @@ function syncAppsHidden() {
     if (hide && !hideStyle) {
         hideStyle = document.createElement("style");
         hideStyle.id = "gc-bp-hide-apps";
-        hideStyle.textContent = `${LAUNCHER} { width: 0 !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }`;
+        hideStyle.textContent = `${LAUNCHER} { width: 0 !important; min-width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }`;
         document.head.appendChild(hideStyle);
     } else if (!hide && hideStyle) {
         hideStyle.remove();
@@ -163,6 +183,8 @@ function BackpackBar({ buttons }: { buttons: ReactNode; }) {
     const collected = collect(buttons);
     const { props } = collected;
     const entries = props ? [...collected.entries, appsEntry(root)] : collected.entries;
+
+    useEffect(() => { tagLauncher(root.current); });
 
     // close on outside click / Esc — but not while a packed button's picker, popup or modal is open
     useEffect(() => {
