@@ -77,6 +77,54 @@ function collect(buttons: ReactNode): { entries: Entry[]; props: any; } {
     return { entries, props };
 }
 
+const APPS_ID = "native:apps-launcher";
+const LAUNCHER = '[class*="channelAppLauncher"]';
+
+function findLauncher(from: HTMLElement | null) {
+    let el: HTMLElement | null = from;
+    for (let i = 0; el && i < 6; i++, el = el.parentElement) {
+        const hit = el.querySelector<HTMLElement>(LAUNCHER);
+        if (hit) return hit;
+    }
+    return document.querySelector<HTMLElement>(LAUNCHER);
+}
+
+const AppsIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" rx="2" />
+    </svg>
+);
+
+function appsEntry(root: React.RefObject<HTMLDivElement | null>): Entry {
+    return {
+        id: APPS_ID, name: "Apps",
+        node: (
+            <ChatBarButton tooltip="Apps" onClick={() => {
+                const l = findLauncher(root.current);
+                (l?.querySelector<HTMLElement>('[role="button"], button') ?? l)?.click();
+            }}>
+                <AppsIcon />
+            </ChatBarButton>
+        )
+    };
+}
+
+/** Hide Discord's real Apps button (but keep it in place so its popout still anchors next to the backpack). */
+let hideStyle: HTMLStyleElement | undefined;
+function syncAppsHidden() {
+    const hide = !!unpacked && !unpacked.has(APPS_ID);
+    if (hide && !hideStyle) {
+        hideStyle = document.createElement("style");
+        hideStyle.id = "gc-bp-hide-apps";
+        hideStyle.textContent = `${LAUNCHER} { width: 0 !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }`;
+        document.head.appendChild(hideStyle);
+    } else if (!hide && hideStyle) {
+        hideStyle.remove();
+        hideStyle = undefined;
+    }
+}
+listeners.add(syncAppsHidden);
+
 function PackMenu({ entries }: { entries: Entry[]; }) {
     useBackpack();
     const natives = entries.filter(e => !e.plugin);
@@ -112,7 +160,9 @@ function BackpackBar({ buttons }: { buttons: ReactNode; }) {
         const t = setTimeout(() => setSettled(true), 340);
         return () => clearTimeout(t);
     }, [open]);
-    const { entries, props } = collect(buttons);
+    const collected = collect(buttons);
+    const { props } = collected;
+    const entries = props ? [...collected.entries, appsEntry(root)] : collected.entries;
 
     // close on outside click / Esc — but not while a packed button's picker, popup or modal is open
     useEffect(() => {

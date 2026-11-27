@@ -22,7 +22,7 @@
 }
 .gc-bp-open .gc-bp-sep { width: 2px; margin: 0 6px 0 4px; }
 
-.gc-bp-toggle { display: flex; position: relative; margin-right: 6px; }
+.gc-bp-toggle { display: flex; position: relative; }
 .gc-bp-icon { position: relative; display: flex; align-items: center; justify-content: center; transition: transform .25s cubic-bezier(.22, 1, .36, 1), color .15s; }
 .gc-bp-open .gc-bp-icon { color: #8b95ff; transform: rotate(-8deg); }
 .gc-bp-badge {
