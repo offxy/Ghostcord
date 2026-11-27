@@ -1,0 +1,11 @@
+.gc-vs-err { color: #f23f43; }
+.gc-vs-card { display: flex; gap: 14px; padding: 14px; border-radius: 12px; background: var(--background-secondary); }
+.gc-vs-av { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+.gc-vs-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.gc-vs-name { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: var(--header-primary); }
+.gc-vs-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.gc-vs-green { background: rgb(35 165 90 / 18%); color: #9be9b8; }
+.gc-vs-red { background: rgb(242 63 67 / 18%); color: #ffb3b5; }
+.gc-vs-guilds { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.gc-sp-actions { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 6px; }
+.gc-sp-actions .gc-btn { padding: 5px 8px; font-size: 12px; }

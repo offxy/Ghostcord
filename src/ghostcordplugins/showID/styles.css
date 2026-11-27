@@ -1,0 +1,11 @@
+.gc-id-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 2px; }
+.gc-id {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+    background: rgb(88 101 242 / 14%); border: 1px solid rgb(88 101 242 / 30%); color: #c9cdfb;
+    font-family: var(--font-code, monospace); font-size: 12px; transition: background .15s, transform .08s;
+}
+.gc-id:hover { background: rgb(88 101 242 / 24%); }
+.gc-id:active { transform: scale(.97); }
+.gc-id-copied { background: rgb(35 165 90 / 20%); border-color: rgb(35 165 90 / 45%); color: #9be9b8; }
+.gc-id-icon { opacity: .85; }
+.gc-id-age { font-size: 12px; color: var(--text-muted); }

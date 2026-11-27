@@ -1,0 +1,11 @@
+.gc-sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.gc-sp-card { position: relative; border-radius: 12px; overflow: hidden; background: var(--background-secondary); border: 1px solid rgb(255 255 255 / 5%); }
+.gc-sp-banner { height: 70px; background-size: cover; background-position: center; }
+.gc-sp-avatar { position: absolute; top: 36px; left: 12px; width: 64px; height: 64px; border-radius: 50%; border: 5px solid var(--background-secondary); background: var(--background-tertiary); object-fit: cover; }
+.gc-sp-body { padding: 38px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.gc-sp-name { font-size: 16px; font-weight: 700; color: var(--header-primary); }
+.gc-sp-tag { font-size: 12.5px; color: var(--text-muted); }
+.gc-sp-bio { margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--background-tertiary); font-size: 12.5px; white-space: pre-wrap; max-height: 90px; overflow-y: auto; }
+.gc-sp-meta { margin-top: 4px; font-size: 11px; color: var(--text-muted); }
+.gc-sp-actions { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 6px; }
+.gc-sp-actions .gc-btn { padding: 5px 8px; font-size: 12px; }

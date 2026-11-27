@@ -1,0 +1,9 @@
+.gc-el-tabs { display: flex; gap: 6px; }
+.gc-el-tab { border: none; padding: 6px 12px; border-radius: 999px; background: var(--background-secondary); color: var(--text-muted); font-weight: 600; font-size: 13px; cursor: pointer; }
+.gc-el-tab:hover { color: var(--text-normal); }
+.gc-el-on { background: #5865f2; color: #fff; }
+.gc-el-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; background: var(--background-secondary); }
+.gc-el-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.gc-el-main { flex: 1; min-width: 0; }
+.gc-el-text { font-size: 13.5px; }
+.gc-el-time { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
