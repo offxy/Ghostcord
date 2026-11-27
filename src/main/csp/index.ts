@@ -28,6 +28,7 @@ export const CspPolicies: PolicyMap = {
     "ws://localhost:*": ConnectSrc,
     "ws://127.0.0.1:*": ConnectSrc,
 
+    "themes.equicord.org": ImageAndCssSrc, // Theme Library downloads
     "*.github.io": ImageAndCssSrc, // GitHub pages, used by most themes
     "github.com": ImageMediaAndCssSrc, // GitHub content (stuff uploaded to markdown forms), used by most themes
     "raw.githubusercontent.com": ImageMediaAndCssSrc, // GitHub raw, used by some themes
