@@ -1,33 +1,32 @@
 .gc-bp-bar { display: flex; align-items: center; flex-wrap: nowrap; }
+
+/* drawer: buttons slide out to the left of the backpack */
+.gc-bp-drawer {
+    display: grid; grid-template-columns: 0fr; overflow: hidden;
+    transition: grid-template-columns .32s cubic-bezier(.22, 1, .36, 1);
+}
+.gc-bp-open .gc-bp-drawer { grid-template-columns: 1fr; }
+.gc-bp-drawer-inner { min-width: 0; display: flex; align-items: center; flex-wrap: nowrap; }
+.gc-bp-slot {
+    display: flex; opacity: 0; transform: translateX(14px) scale(.85); filter: blur(2px);
+    transition: opacity .2s ease, transform .28s cubic-bezier(.22, 1, .36, 1), filter .2s ease;
+}
+.gc-bp-open .gc-bp-slot { opacity: 1; transform: none; filter: none; }
+.gc-bp-slot > *, .gc-bp-slot [class*="buttonContainer"] { margin: 0 !important; }
+
+.gc-bp-sep {
+    width: 0; height: 22px; margin: 0; border-radius: 1px; background: rgb(255 255 255 / 12%);
+    transition: width .2s ease, margin .2s ease;
+}
+.gc-bp-open .gc-bp-sep { width: 2px; margin: 0 6px 0 4px; }
+
 .gc-bp-toggle { display: flex; position: relative; }
-.gc-bp-icon { position: relative; display: flex; align-items: center; justify-content: center; transition: transform .15s ease, color .15s; }
-.gc-bp-open .gc-bp-icon { color: #8b95ff; transform: translateY(-1px) scale(1.06); }
+.gc-bp-icon { position: relative; display: flex; align-items: center; justify-content: center; transition: transform .25s cubic-bezier(.22, 1, .36, 1), color .15s; }
+.gc-bp-open .gc-bp-icon { color: #8b95ff; transform: rotate(-12deg) scale(1.08); }
 .gc-bp-badge {
     position: absolute; top: -7px; right: -10px; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box;
     border-radius: 9px; background: #5865f2; color: #fff; font-size: 10px; font-weight: 800; line-height: 13px; text-align: center;
     border: 2px solid var(--channeltextarea-background, var(--bg-overlay-3, #383a40));
+    animation: gc-bp-pop .25s cubic-bezier(.2, 1.4, .4, 1);
 }
-
-.gc-bp-panel {
-    position: fixed; z-index: 1002; min-width: 220px; max-width: min(520px, calc(100vw - 24px));
-    padding: 10px; border-radius: 14px; box-sizing: border-box;
-    background: var(--background-floating, #111214); border: 1px solid rgb(255 255 255 / 8%);
-    box-shadow: 0 16px 40px rgb(0 0 0 / 50%), 0 0 0 1px rgb(88 101 242 / 12%);
-    transform-origin: bottom right; animation: gc-bp-in .18s cubic-bezier(.2, .9, .3, 1.15);
-}
-.gc-bp-panel::after {
-    content: ""; position: absolute; bottom: -6px; right: 18px; width: 11px; height: 11px; transform: rotate(45deg);
-    background: var(--background-floating, #111214); border-right: 1px solid rgb(255 255 255 / 8%); border-bottom: 1px solid rgb(255 255 255 / 8%);
-}
-.gc-bp-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; margin-bottom: 8px; border-bottom: 1px solid rgb(255 255 255 / 6%); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
-.gc-bp-logo { width: 16px; height: 16px; image-rendering: pixelated; }
-.gc-bp-count { margin-left: auto; padding: 1px 7px; border-radius: 999px; background: rgb(88 101 242 / 20%); color: #c9cdfb; font-size: 11px; }
-.gc-bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 4px; }
-.gc-bp-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 6px; border-radius: 10px; transition: background .12s, transform .1s; }
-.gc-bp-item:hover { background: var(--background-modifier-hover, rgb(255 255 255 / 6%)); transform: translateY(-1px); }
-.gc-bp-btn { display: flex; align-items: center; justify-content: center; height: 32px; }
-.gc-bp-btn > *, .gc-bp-btn [class*="buttonContainer"] { margin: 0 !important; }
-.gc-bp-label { max-width: 76px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gc-bp-item:hover .gc-bp-label { color: var(--text-normal); }
-.gc-bp-empty { padding: 10px 6px; font-size: 13px; color: var(--text-muted); text-align: center; }
-@keyframes gc-bp-in { from { opacity: 0; transform: translateY(8px) scale(.95); } to { opacity: 1; transform: none; } }
+@keyframes gc-bp-pop { from { transform: scale(0); } to { transform: scale(1); } }
