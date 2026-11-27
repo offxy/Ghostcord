@@ -1,263 +1,641 @@
 /*
- * Ghostcord — Backpack: packs chat bar buttons (Discord's own AND plugin buttons) into one button.
- * Click to slide the buttons out. Right-click the backpack to choose what stays on the bar.
- * Right-click a packed plugin button to open that plugin's settings.
+ * Ghostcord — Backpack
+ * Tucks the chat bar buttons (gift, GIF, stickers, emoji, apps, and every
+ * plugin button) into one backpack button. Drag buttons in and out of it.
  */
 
-import "./styles.css";
-
-import { ChatBarButton, ChatBarButtonMap } from "@api/ChatButtons";
-import * as DataStore from "@api/DataStore";
-import { Settings } from "@api/Settings";
-import { plugins } from "@api/PluginManager";
-import ErrorBoundary from "@components/ErrorBoundary";
-import { openPluginModal } from "@components/settings/tabs/plugins/PluginModal";
-import definePlugin, { StartAt } from "@utils/types";
-import { ContextMenuApi, Menu, React, useEffect, useRef, useState } from "@webpack/common";
-import type { ReactNode } from "react";
+import { addChatBarButton, ChatBarButton, removeChatBarButton } from "@api/ChatButtons";
+import { definePluginSettings } from "@api/Settings";
+import definePlugin, { OptionType } from "@utils/types";
+import { React } from "@webpack/common";
 
 import { GC_AUTHOR } from "../_gc/voice";
 
-const KEY = "Backpack_unpackedButtons_v3";
-const VC_GROUP = "vencord-chat-buttons";
-const NO_SETTINGS = new Set(["Translate"]);
-const NATIVE_NAMES: Record<string, string> = {
-    gift: "Gift", gifts: "Gift", gif: "GIF", gifs: "GIF", sticker: "Stickers", stickers: "Stickers",
-    emoji: "Emoji", emojis: "Emoji", app_launcher: "Apps", apps: "Apps", activity: "Activities", soundboard: "Soundboard"
-};
 
-let unpacked: Set<string> | null = null; // buttons kept on the bar; everything else is packed. null = not loaded yet
-const listeners = new Set<() => void>();
-const emit = () => listeners.forEach(l => l());
-const save = () => DataStore.set(KEY, [...(unpacked ?? [])]);
+const OPEN_CLASS = "vc-backpack-open";
+const DRAG_CLASS = "vc-backpack-dragging";
+const STYLE_ID = "vc-backpack-dynamic";
+const CONTAINER = ':is([class^="buttons_"], [class*=" buttons_"]):has(.vc-backpack-btn)';
 
-function togglePacked(id: string) {
-    if (!unpacked) return;
-    unpacked.has(id) ? unpacked.delete(id) : unpacked.add(id);
-    save();
-    emit();
+const settings = definePluginSettings({
+    // tooltip texts (or parts of them) of buttons that stay out of the backpack
+    kept: { type: OptionType.CUSTOM, default: [] as string[], description: "Buttons kept out of the backpack" },
+    keptList: {
+        type: OptionType.COMPONENT,
+        component: () => <KeptListSetting />
+    },
+    closeAfterClick: {
+        type: OptionType.BOOLEAN,
+        description: "Close the backpack after you click a button inside it",
+        default: true
+    },
+    rememberOpen: {
+        type: OptionType.BOOLEAN,
+        description: "Remember whether the backpack was open after restarting",
+        default: false
+    },
+    wasOpen: { type: OptionType.CUSTOM, default: false, description: "Whether the backpack was open" }
+});
+
+// ---------------------------------------------------------------------------
+// Kept list
+// ---------------------------------------------------------------------------
+
+const lower = (s: string) => s.toLowerCase();
+
+function isKept(label: string) {
+    return settings.store.kept.some(k => lower(label).includes(lower(k)));
 }
 
-function useBackpack() {
-    const [, rerender] = useState(0);
-    useEffect(() => {
-        const l = () => rerender(n => n + 1);
-        listeners.add(l);
-        return () => void listeners.delete(l);
-    }, []);
+function keep(label: string) {
+    if (!isKept(label)) settings.store.kept = [...settings.store.kept, label];
+    updateStyle();
 }
 
-interface Entry { id: string; name: string; node: ReactNode; plugin?: string; }
-
-const nativeName = (key: string) => NATIVE_NAMES[key.toLowerCase()] ?? key.replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-
-/** Turn Discord's button list into individual entries we can pack/unpack. */
-function collect(buttons: ReactNode): { entries: Entry[]; props: any; } {
-    const list = (Array.isArray(buttons) ? buttons : [buttons]).flat().filter(Boolean) as any[];
-    const entries: Entry[] = [];
-    let props: any = null;
-    list.forEach((el, i) => {
-        const key = String(el?.key ?? `btn-${i}`);
-        if (key === VC_GROUP) {
-            props = el.props;
-            const isMainChat = props?.type?.analyticsName === "normal";
-            const isAnyChat = ["normal", "sidebar"].includes(props?.type?.analyticsName);
-            const enabled = Settings.uiElements?.chatBarButtons ?? {};
-            for (const [id, { render: Button }] of ChatBarButtonMap) {
-                if (id === "Backpack" || enabled[id]?.enabled === false) continue;
-                entries.push({
-                    id, name: id, plugin: id,
-                    node: <ErrorBoundary noop key={id}><Button {...props} isMainChat={isMainChat} isAnyChat={isAnyChat} /></ErrorBoundary>
-                });
-            }
-        } else {
-            entries.push({ id: `native:${key}`, name: nativeName(key), node: el });
-        }
-    });
-    return { entries, props };
+function tuck(label: string) {
+    settings.store.kept = settings.store.kept.filter(k => !lower(label).includes(lower(k)));
+    updateStyle();
 }
 
-const APPS_ID = "native:apps-launcher";
-const LAUNCHER = "[data-gc-bp-launcher]";
-
-/**
- * Discord renders the Apps button outside the button row we get, right after it.
- * Find it by walking up from our bar and taking the next sibling that holds a button.
- */
-function tagLauncher(from: HTMLElement | null) {
-    const bar = from?.closest('[class*="channelTextArea"], form') ?? document;
-    const known = bar.querySelector<HTMLElement>(LAUNCHER);
-    if (known?.isConnected) return known;
-    let el: HTMLElement | null = from;
-    for (let i = 0; el && i < 5; i++, el = el.parentElement) {
-        let sib = el.nextElementSibling as HTMLElement | null;
-        while (sib) {
-            const small = sib.getBoundingClientRect().width <= 64; // a single icon button, never a whole region
-            if (small && !sib.contains(from) && (sib.matches('button, [role="button"]') || sib.querySelector('button, [role="button"]'))) {
-                sib.setAttribute("data-gc-bp-launcher", "");
-                return sib;
-            }
-            sib = sib.nextElementSibling as HTMLElement | null;
-        }
-    }
-    // fallback: anything labelled "Apps" in this chat bar
-    const byLabel = bar.querySelector<HTMLElement>('[aria-label="Apps"], [aria-label*="App Launcher" i], [class*="AppLauncher"], [class*="appLauncher"]');
-    const host = byLabel?.closest<HTMLElement>('[class*="buttonContainer"], [class*="container"]') ?? byLabel;
-    host?.setAttribute("data-gc-bp-launcher", "");
-    return host ?? null;
-}
-
-const findLauncher = (from: HTMLElement | null) => tagLauncher(from);
-
-const AppsIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" rx="2" />
-    </svg>
-);
-
-function appsEntry(root: React.RefObject<HTMLDivElement | null>): Entry {
-    return {
-        id: APPS_ID, name: "Apps",
-        node: (
-            <ChatBarButton tooltip="Apps" onClick={() => {
-                const l = findLauncher(root.current);
-                (l?.querySelector<HTMLElement>('[role="button"], button') ?? l)?.click();
-            }}>
-                <AppsIcon />
-            </ChatBarButton>
-        )
-    };
-}
-
-/** Hide Discord's real Apps button (but keep it in place so its popout still anchors next to the backpack). */
-let hideStyle: HTMLStyleElement | undefined;
-function syncAppsHidden() {
-    const hide = !!unpacked && !unpacked.has(APPS_ID);
-    if (hide && !hideStyle) {
-        hideStyle = document.createElement("style");
-        hideStyle.id = "gc-bp-hide-apps";
-        hideStyle.textContent = `${LAUNCHER} { width: 0 !important; min-width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }`;
-        document.head.appendChild(hideStyle);
-    } else if (!hide && hideStyle) {
-        hideStyle.remove();
-        hideStyle = undefined;
-    }
-}
-listeners.add(syncAppsHidden);
-
-function PackMenu({ entries }: { entries: Entry[]; }) {
-    useBackpack();
-    const natives = entries.filter(e => !e.plugin);
-    const plugs = entries.filter(e => e.plugin).sort((a, b) => a.name.localeCompare(b.name));
-    const row = (e: Entry) => (
-        <Menu.MenuCheckboxItem key={e.id} id={`gc-bp-${e.id}`} label={e.name} checked={!unpacked?.has(e.id)} action={() => togglePacked(e.id)} />
-    );
+function KeptListSetting() {
+    const { kept } = settings.use(["kept"]);
     return (
-        <Menu.Menu navId="gc-backpack-pack" onClose={ContextMenuApi.closeContextMenu} aria-label="Pack into Backpack">
-            {natives.length > 0 && <Menu.MenuGroup label="Discord buttons">{natives.map(row)}</Menu.MenuGroup>}
-            {plugs.length > 0 && <Menu.MenuGroup label="Plugin buttons">{plugs.map(row)}</Menu.MenuGroup>}
-            <Menu.MenuGroup>
-                <Menu.MenuItem id="gc-bp-all" label="Pack everything" action={() => { unpacked?.clear(); save(); emit(); }} />
-                <Menu.MenuItem id="gc-bp-none" label="Unpack everything" action={() => { entries.forEach(e => unpacked?.add(e.id)); save(); emit(); }} />
-            </Menu.MenuGroup>
-        </Menu.Menu>
-    );
-}
-
-const BagIcon = ({ className }: { className?: string; }) => (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M9 3a3 3 0 0 1 6 0v1h1.5A4.5 4.5 0 0 1 21 8.5V19a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8.5A4.5 4.5 0 0 1 7.5 4H9V3Zm2 1h2V3a1 1 0 1 0-2 0v1Zm-4 8a1 1 0 0 0 0 2h10a1 1 0 1 0 0-2H7Zm2 3.5a1 1 0 0 0-1 1V18a1 1 0 1 0 2 0v-1.5a1 1 0 0 0-1-1Z" />
-    </svg>
-);
-
-function BackpackBar({ buttons }: { buttons: ReactNode; }) {
-    useBackpack();
-    const [open, setOpen] = useState(false);
-    const [settled, setSettled] = useState(false); // drawer finished opening → stop clipping
-    const root = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        if (!open) { setSettled(false); return; }
-        const t = setTimeout(() => setSettled(true), 340);
-        return () => clearTimeout(t);
-    }, [open]);
-    const collected = collect(buttons);
-    const { props } = collected;
-    const entries = props ? [...collected.entries, appsEntry(root)] : collected.entries;
-
-    useEffect(() => { tagLauncher(root.current); });
-
-    // close on outside click / Esc — but not while a packed button's picker, popup or modal is open
-    useEffect(() => {
-        if (!open) return;
-        const onDown = (e: MouseEvent) => {
-            const t = e.target as HTMLElement;
-            if (root.current?.contains(t)) return;
-            if (t.closest?.('[class*="layerContainer"], [role="dialog"], [role="menu"], [class*="popout"], [class*="picker"], .gc-backdrop')) return;
-            setOpen(false);
-        };
-        const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-        document.addEventListener("mousedown", onDown, true);
-        document.addEventListener("keydown", onKey);
-        return () => { document.removeEventListener("mousedown", onDown, true); document.removeEventListener("keydown", onKey); };
-    }, [open]);
-
-    if (!props || !unpacked || props.type?.analyticsName !== "normal") return <>{buttons}</>;
-
-    const inBag = entries.filter(e => !unpacked!.has(e.id));
-    const onBar = entries.filter(e => unpacked!.has(e.id));
-
-    return (
-        <div ref={root} className={`gc-bp-bar${open ? " gc-bp-open" : ""}${settled ? " gc-bp-settled" : ""}`}>
-            {onBar.map(e => <React.Fragment key={e.id}>{e.node}</React.Fragment>)}
-            <div className="gc-bp-drawer" aria-hidden={!open}>
-                <div className="gc-bp-drawer-inner">
-                    {inBag.map((e, i) => (
-                        <div key={e.id} className="gc-bp-slot" style={{ transitionDelay: open ? `${(inBag.length - 1 - i) * 28}ms` : "0ms" }}
-                            onContextMenu={ev => {
-                                const p = e.plugin && plugins[e.plugin];
-                                if (!p || NO_SETTINGS.has(e.plugin!)) return;
-                                ev.preventDefault();
-                                ev.stopPropagation();
-                                openPluginModal(p);
-                            }}>
-                            {e.node}
-                        </div>
-                    ))}
-                </div>
+        <div className="vc-backpack-setting">
+            <div className="vc-backpack-setting-title">Buttons kept out of the backpack</div>
+            <div className="vc-backpack-setting-hint">
+                Open the backpack (Esc closes it) and drag a button onto "Keep in chat bar" or "Put in backpack". You can also remove one here.
             </div>
-            {inBag.length > 0 && <div className="gc-bp-sep" />}
-            <div className="gc-bp-toggle">
-                <ChatBarButton
-                    tooltip={open ? "Close backpack" : `Backpack (${inBag.length})`}
-                    onClick={() => setOpen(o => !o)}
-                    onContextMenu={e => ContextMenuApi.openContextMenu(e, () => <PackMenu entries={entries} />)}
-                >
-                    <div className="gc-bp-icon">
-                        <BagIcon />
-                        {!open && inBag.length > 0 && <span className="gc-bp-badge">{inBag.length}</span>}
-                    </div>
-                </ChatBarButton>
+            <div className="vc-backpack-chips">
+                {kept.length === 0 && <span className="vc-backpack-setting-hint">None, everything is in the backpack.</span>}
+                {kept.map(k => (
+                    <span key={k} className="vc-backpack-chip">
+                        {k}
+                        <button aria-label={`Put ${k} in the backpack`} onClick={() => tuck(k)}>×</button>
+                    </span>
+                ))}
             </div>
         </div>
     );
 }
 
+// ---------------------------------------------------------------------------
+// Open / closed state
+// ---------------------------------------------------------------------------
+
+const listeners = new Set<() => void>();
+const countListeners = new Set<() => void>();
+const isOpen = () => document.body.classList.contains(OPEN_CLASS);
+
+function setOpen(open: boolean) {
+    document.body.classList.toggle(OPEN_CLASS, open);
+    settings.store.wasOpen = open;
+    listeners.forEach(l => l());
+}
+
+function useOpen() {
+    const [open, set] = React.useState(isOpen);
+    React.useEffect(() => {
+        const l = () => set(isOpen());
+        listeners.add(l);
+        return () => void listeners.delete(l);
+    }, []);
+    return open;
+}
+
+// ---------------------------------------------------------------------------
+// CSS + tagging the chat bar items
+// ---------------------------------------------------------------------------
+
+const cssEscape = (s: string) => s.replace(/["\\]/g, "\\$&");
+
+function tuckedSelector() {
+    const notKept = settings.store.kept
+        .map(k => `:not(:has([aria-label*="${cssEscape(k)}" i]))`)
+        .join("");
+    return `${CONTAINER} > :not(:has(.vc-backpack-btn))${notKept}`;
+}
+
+function updateStyle() {
+    let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+    if (!el) {
+        el = document.createElement("style");
+        el.id = STYLE_ID;
+        document.head.appendChild(el);
+    }
+    const tucked = tuckedSelector();
+    el.textContent = `
+body:not(.${OPEN_CLASS}) ${tucked} { display: none !important; }
+body.${OPEN_CLASS}:not(.${DRAG_CLASS}) ${tucked} { animation: vc-backpack-pop 0.16s ease-out both; }
+body.${OPEN_CLASS} ${tucked} { box-shadow: inset 0 -2px 0 var(--vc-backpack-accent); border-radius: 4px; }
+`;
+    tagItems();
+}
+
+function labelOf(item: Element) {
+    return item.querySelector("[aria-label]")?.getAttribute("aria-label")?.trim() ?? "";
+}
+
+function tagItems() {
+    let tucked: Set<Element>;
+    try {
+        tucked = new Set(document.querySelectorAll(tuckedSelector()));
+    } catch {
+        tucked = new Set();
+    }
+    for (const container of document.querySelectorAll(CONTAINER)) {
+        for (const item of container.children) {
+            if (item.querySelector(".vc-backpack-btn")) continue;
+            if (!labelOf(item)) continue;
+            item.classList.add("vc-backpack-item");
+            item.classList.toggle("vc-backpack-tucked", tucked.has(item));
+            if (item.getAttribute("draggable") !== "true") item.setAttribute("draggable", "true");
+        }
+    }
+    countListeners.forEach(l => l());
+}
+
+// ---------------------------------------------------------------------------
+// Drag and drop
+// ---------------------------------------------------------------------------
+
+let dragLabel: string | null = null;
+let overlay: HTMLDivElement | null = null;
+
+function zone(kind: "keep" | "tuck", current: boolean) {
+    const z = document.createElement("div");
+    z.className = `vc-backpack-zone vc-backpack-zone-${kind}${current ? " vc-backpack-zone-current" : ""}`;
+    z.dataset.zone = kind;
+    z.innerHTML = `
+        <span class="vc-backpack-zone-icon">${kind === "tuck"
+            ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 9a7 7 0 0 1 14 0v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M9 4.5V4a3 3 0 0 1 6 0v.5M8 14h8"/></svg>'
+            : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 17v5M5 17h14l-2-4V4H7v9z"/></svg>'}</span>
+        <span class="vc-backpack-zone-text">
+            <strong>${kind === "tuck" ? "Put in backpack" : "Keep in chat bar"}</strong>
+            <small>${current ? "it's here now" : "drop here"}</small>
+        </span>`;
+    return z;
+}
+
+function showOverlay(anchor: Element, label: string) {
+    hideOverlay();
+    const rect = anchor.getBoundingClientRect();
+    const kept = isKept(label);
+
+    overlay = document.createElement("div");
+    overlay.className = "vc-backpack-overlay";
+    overlay.append(zone("keep", kept), zone("tuck", !kept));
+
+    const title = document.createElement("div");
+    title.className = "vc-backpack-overlay-title";
+    title.textContent = `Moving "${label}"`;
+    overlay.prepend(title);
+
+    document.body.appendChild(overlay);
+
+    // sit just above the chat bar buttons, right-aligned to them, kept on screen
+    const w = overlay.offsetWidth;
+    const h = overlay.offsetHeight;
+    const left = Math.max(8, Math.min(rect.right - w, window.innerWidth - w - 8));
+    const top = Math.max(8, rect.top - h - 12);
+    overlay.style.left = `${left}px`;
+    overlay.style.top = `${top}px`;
+}
+
+function hideOverlay() {
+    overlay?.remove();
+    overlay = null;
+}
+
+function onDragStart(e: DragEvent) {
+    const item = (e.target as HTMLElement | null)?.closest?.(".vc-backpack-item");
+    if (!item) return;
+    const label = labelOf(item);
+    if (!label) return;
+
+    dragLabel = label;
+    e.dataTransfer?.setData("text/x-vc-backpack", label);
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+
+    document.body.classList.add(DRAG_CLASS);
+    item.classList.add("vc-backpack-dragged");
+    const container = item.parentElement!;
+    // wait a frame so the browser grabs its drag image before we add the overlay
+    requestAnimationFrame(() => dragLabel && showOverlay(container, label));
+}
+
+function dropTargetFrom(e: DragEvent): "keep" | "tuck" | null {
+    const t = e.target as HTMLElement | null;
+    const z = t?.closest?.("[data-zone]") as HTMLElement | null;
+    if (z) return z.dataset.zone as "keep" | "tuck";
+    if (t?.closest?.(".vc-backpack-btn")) return "tuck";
+    return null;
+}
+
+function onDragOver(e: DragEvent) {
+    if (!dragLabel) return;
+    const target = dropTargetFrom(e);
+    overlay?.querySelectorAll(".vc-backpack-zone").forEach(z =>
+        z.classList.toggle("vc-backpack-zone-hover", (z as HTMLElement).dataset.zone === target));
+    document.body.classList.toggle("vc-backpack-over-bag", target === "tuck");
+    if (target) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    }
+}
+
+function onDrop(e: DragEvent) {
+    if (!dragLabel) return;
+    const target = dropTargetFrom(e);
+    if (!target) return;
+    e.preventDefault();
+    if (target === "keep") keep(dragLabel);
+    else tuck(dragLabel);
+    endDrag();
+}
+
+function endDrag() {
+    dragLabel = null;
+    hideOverlay();
+    document.body.classList.remove(DRAG_CLASS, "vc-backpack-over-bag");
+    document.querySelectorAll(".vc-backpack-dragged").forEach(n => n.classList.remove("vc-backpack-dragged"));
+    tagItems();
+}
+
+function onKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape" && isOpen() && !dragLabel) setOpen(false);
+}
+
+// Close after clicking a tucked button
+function onClick(e: MouseEvent) {
+    if (!isOpen() || !settings.store.closeAfterClick) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest(".vc-backpack-tucked")) setTimeout(() => setOpen(false), 0);
+}
+
+// ---------------------------------------------------------------------------
+// The backpack button
+// ---------------------------------------------------------------------------
+
+const BackpackIcon = ({ open }: { open?: boolean; }) => (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path d="M9 2a3 3 0 0 0-3 3v.3A6 6 0 0 0 2 11v8a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-8a6 6 0 0 0-4-5.7V5a3 3 0 0 0-3-3H9Zm7 3.08V5a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v.08A6 6 0 0 1 8 5h8v.08ZM7 13a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-3v-1a1 1 0 1 0-2 0v1H8a1 1 0 0 1-1-1v-3Z" />
+        {open && <circle cx={19} cy={5} r={4} fill="var(--status-positive, #23a55a)" stroke="var(--channeltextarea-background, #383a40)" strokeWidth={2} />}
+    </svg>
+);
+
+function useTuckedCount() {
+    const [n, set] = React.useState(0);
+    React.useEffect(() => {
+        const l = () => set(document.querySelectorAll(".vc-backpack-tucked").length);
+        l();
+        countListeners.add(l);
+        return () => void countListeners.delete(l);
+    }, []);
+    return n;
+}
+
+const BackpackButton = () => {
+    const open = useOpen();
+    const count = useTuckedCount();
+    return (
+        <ChatBarButton
+            tooltip={open ? "Close backpack · drag buttons in or out" : "Open backpack"}
+            onClick={() => setOpen(!open)}
+        >
+            <span className="vc-backpack-btn" aria-expanded={open}>
+                <BackpackIcon open={open} />
+                {!open && count > 0 && <span className="vc-backpack-count">{count}</span>}
+            </span>
+        </ChatBarButton>
+    );
+};
+
+// shows in every chat box that has buttons: main chat, threads, DMs, forum posts, the edit box
+const renderButton = (() => <BackpackButton />) as any;
+
+// ---------------------------------------------------------------------------
+// Plugin
+// ---------------------------------------------------------------------------
+
+let observer: MutationObserver | null = null;
+let tagQueued = false;
+
+
+// ---- styles (built into this file so the plugin is a single file) ----
+const PLUGIN_CSS = String.raw`
+:root {
+    --vc-backpack-accent: var(--brand-500, #5865f2);
+}
+
+@keyframes vc-backpack-pop {
+    from { opacity: 0; transform: translateX(10px) scale(0.85); }
+    to { opacity: 1; transform: none; }
+}
+
+.vc-backpack-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: transform 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* ---------- always last (rightmost) in the button row ---------- */
+:is([class^="buttons_"], [class*=" buttons_"]) > :has(.vc-backpack-btn) {
+    order: 9999;
+}
+
+/* ---------- divider after the backpack while open ---------- */
+body.vc-backpack-open :is([class^="buttons_"], [class*=" buttons_"]) > :has(.vc-backpack-btn) {
+    position: relative;
+    margin-left: 4px;
+}
+
+body.vc-backpack-open :is([class^="buttons_"], [class*=" buttons_"]) > :has(.vc-backpack-btn)::after {
+    content: "";
+    position: absolute;
+    top: 25%;
+    left: -3px;
+    width: 1px;
+    height: 50%;
+    background: var(--border-subtle, var(--background-modifier-accent, #4e5058));
+}
+
+/* ---------- dragging ---------- */
+.vc-backpack-item[draggable="true"] {
+    cursor: grab;
+}
+
+.vc-backpack-dragged {
+    opacity: 0.35;
+}
+
+/* the backpack itself is a drop target too */
+body.vc-backpack-dragging .vc-backpack-btn {
+    box-shadow: 0 0 0 2px var(--vc-backpack-accent);
+    animation: vc-backpack-wiggle 0.9s ease-in-out infinite;
+}
+
+body.vc-backpack-over-bag .vc-backpack-btn {
+    transform: scale(1.2);
+    color: var(--vc-backpack-accent);
+    animation: none;
+}
+
+@keyframes vc-backpack-wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-8deg); }
+    75% { transform: rotate(8deg); }
+}
+
+/* ---------- drop overlay ---------- */
+.vc-backpack-overlay {
+    position: fixed;
+    z-index: 1000;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--border-subtle, #3f4147);
+    border-radius: 10px;
+    background: var(--background-floating, var(--background-base-lowest, #111214));
+    box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+    color: var(--text-default, var(--text-normal, #dbdee1));
+    animation: vc-backpack-rise 0.14s ease-out;
+}
+
+@keyframes vc-backpack-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+.vc-backpack-overlay-title {
+    grid-column: 1 / -1;
+    max-width: 320px;
+    overflow: hidden;
+    color: var(--text-muted, #949ba4);
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vc-backpack-zone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 150px;
+    padding: 14px 12px;
+    border: 2px dashed var(--border-strong, #4e5058);
+    border-radius: 8px;
+    transition: border-color 0.1s ease, background-color 0.1s ease, transform 0.1s ease;
+}
+
+.vc-backpack-zone-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.vc-backpack-zone-text {
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+}
+
+.vc-backpack-zone-icon {
+    pointer-events: none;
+}
+
+.vc-backpack-zone strong {
+    color: var(--text-strong, var(--header-primary, #f2f3f5));
+    font-size: 14px;
+}
+
+.vc-backpack-zone small {
+    color: var(--text-muted, #949ba4);
+    font-size: 12px;
+}
+
+.vc-backpack-zone-current {
+    opacity: 0.55;
+}
+
+.vc-backpack-zone-hover {
+    border-style: solid;
+    border-color: var(--vc-backpack-accent);
+    background: color-mix(in srgb, var(--vc-backpack-accent) 18%, transparent);
+    opacity: 1;
+    transform: scale(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.vc-backpack-open .vc-backpack-tucked,
+    body.vc-backpack-dragging .vc-backpack-btn,
+    .vc-backpack-overlay {
+        animation: none !important;
+    }
+}
+
+/* ---------- settings ---------- */
+.vc-backpack-setting {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.vc-backpack-setting-title {
+    color: var(--text-strong, var(--header-primary, #f2f3f5));
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.vc-backpack-setting-hint {
+    color: var(--text-muted, #949ba4);
+    font-size: 13px;
+}
+
+.vc-backpack-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.vc-backpack-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px 2px 10px;
+    border-radius: 12px;
+    background: var(--background-surface-high, var(--background-secondary, #2b2d31));
+    color: var(--text-default, var(--text-normal, #dbdee1));
+    font-size: 13px;
+}
+
+.vc-backpack-chip button {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--text-muted, #949ba4);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.vc-backpack-chip button:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-strong, #f2f3f5);
+}
+
+.vc-backpack-count {
+    position: absolute;
+    right: -6px;
+    bottom: -4px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    box-sizing: border-box;
+    border: 2px solid var(--channeltextarea-background, #383a40);
+    border-radius: 999px;
+    background: var(--vc-backpack-accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 10px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.vc-backpack-overlay { border-radius: 12px; backdrop-filter: blur(8px); }
+.vc-backpack-zone { border-radius: 10px; }
+.vc-backpack-zone-icon { display: flex; color: var(--vc-backpack-accent); }
+
+/* motion */
+.vc-backpack-item {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.vc-backpack-btn svg {
+    transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
+}
+
+body.vc-backpack-open .vc-backpack-btn svg {
+    transform: rotate(-8deg) scale(1.05);
+}
+`;
+
+function injectPluginCss() {
+    if (document.getElementById("vc-chatbackpack-style")) return;
+    const el = document.createElement("style");
+    el.id = "vc-chatbackpack-style";
+    el.textContent = PLUGIN_CSS;
+    document.head.appendChild(el);
+}
+
+function removePluginCss() {
+    document.getElementById("vc-chatbackpack-style")?.remove();
+}
+
 export default definePlugin({
     name: "Backpack",
-    description: "Packs all your chat bar buttons into one backpack that slides open. Right-click it to choose what stays out.",
+    description: "Tucks all the chat bar buttons into a single backpack button. Open it and drag buttons in or out.",
     authors: [GC_AUTHOR],
     dependencies: ["ChatInputButtonAPI"],
-    startAt: StartAt.Init,
-    chatBarButtonWrapper: {
-        wrapper: (buttons: ReactNode) => <ErrorBoundary noop fallback={() => <>{buttons}</>}><BackpackBar buttons={buttons} /></ErrorBoundary>,
-        priority: 50
+    settings,
+
+    start() {
+        injectPluginCss();
+        // migrate from the old per-button toggles if they exist
+        const s = settings.store as any;
+        if (s.keepCustom) {
+            const extra = String(s.keepCustom).split(",").map((x: string) => x.trim()).filter(Boolean);
+            settings.store.kept = [...new Set([...settings.store.kept, ...extra])];
+            s.keepCustom = "";
+        }
+
+        (addChatBarButton as any)("Backpack", renderButton, BackpackIcon);
+        document.body.classList.toggle(OPEN_CLASS, settings.store.rememberOpen && settings.store.wasOpen);
+        updateStyle();
+
+        // Discord's DOM changes constantly (messages, typing); re-tag at most ~6x a second
+        observer = new MutationObserver(() => {
+            if (tagQueued || dragLabel) return;
+            tagQueued = true;
+            setTimeout(() => {
+                tagQueued = false;
+                tagItems();
+            }, 160);
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        document.addEventListener("click", onClick, true);
+        document.addEventListener("keydown", onKeyDown);
+        document.addEventListener("dragstart", onDragStart, true);
+        document.addEventListener("dragover", onDragOver, true);
+        document.addEventListener("drop", onDrop, true);
+        document.addEventListener("dragend", endDrag, true);
     },
-    async start() {
-        unpacked = new Set((await DataStore.get<string[]>(KEY)) ?? []);
-        emit();
-    },
+
     stop() {
-        unpacked = null;
-        emit();
+        removePluginCss();
+        removeChatBarButton("Backpack");
+        observer?.disconnect();
+        observer = null;
+        endDrag();
+        document.removeEventListener("click", onClick, true);
+        document.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("dragstart", onDragStart, true);
+        document.removeEventListener("dragover", onDragOver, true);
+        document.removeEventListener("drop", onDrop, true);
+        document.removeEventListener("dragend", endDrag, true);
+        document.body.classList.remove(OPEN_CLASS);
+        document.getElementById(STYLE_ID)?.remove();
+        document.querySelectorAll(".vc-backpack-item").forEach(n => {
+            n.classList.remove("vc-backpack-item", "vc-backpack-tucked");
+            n.removeAttribute("draggable");
+        });
     }
 });
