@@ -292,15 +292,9 @@ function ThemesTab() {
     }
 
     function setThemeActivationMode(themeId: string, mode: ThemeActivationMode) {
-        const themeActivationModes = { ...(settings.themeActivationModes ?? {}) };
-
-        if (mode === "always") {
-            delete themeActivationModes[themeId];
-        } else {
-            themeActivationModes[themeId] = mode;
-        }
-
-        settings.themeActivationModes = themeActivationModes;
+        // Store "always" explicitly too — deleting it let the theme's own @light/@dark header
+        // get re-detected on the next refresh, which snapped the choice back.
+        settings.themeActivationModes = { ...(settings.themeActivationModes ?? {}), [themeId]: mode };
     }
 
     function togglePinTheme(themeId: string) {
